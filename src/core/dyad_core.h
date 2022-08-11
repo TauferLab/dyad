@@ -114,7 +114,7 @@ typedef struct dyad_kvs_response dyad_kvs_response_t;
 int dyad_init(bool debug, bool check, bool shared_storage,
         unsigned int key_depth, unsigned int key_bins, 
         const char *kvs_namespace, const char* managed_path,
-        dyad_ctx_t **ctx);
+        bool intercept, dyad_ctx_t **ctx);
 
 /**
  * @brief Wrapper function that performs all the common tasks needed
@@ -186,7 +186,15 @@ int dyad_finalize(dyad_ctx_t *ctx);
 
 FILE *dyad_fopen(dyad_ctx_t *ctx, const char *path, const char *mode);
 
+int dyad_open(dyad_ctx_t *ctx, const char *path, int oflag, ...);
+
 int dyad_fclose(dyad_ctx_t *ctx, FILE *fp);
+
+int dyad_close(dyad_ctx_t *ctx, int fd);
+
+#if DYAD_SYNC_DIR
+int dyad_sync_directory(dyad_ctx_t *ctx, const char *path);
+#endif
 
 #ifdef __cplusplus
 }

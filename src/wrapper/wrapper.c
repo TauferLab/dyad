@@ -46,13 +46,6 @@ __thread dyad_ctx_t *ctx = NULL;
 static void dyad_sync_init (void) __attribute__((constructor));
 static void dyad_sync_fini (void) __attribute__((destructor));
 
-int open_real (const char *path, int oflag, ...);
-int close_real (int fd);
-
-#if DYAD_SYNC_DIR
-int sync_directory (const char* path);
-#endif // DYAD_SYNC_DIR
-
 /*****************************************************************************
  *                                                                           *
  *                   DYAD Sync Internal API                                  *
@@ -124,6 +117,7 @@ void dyad_sync_init (void)
     unsigned int key_bins = 0;
     char *kvs_namespace = NULL;
     char *managed_path = NULL;
+    bool intercept = true;
 
     DPRINTF ("DYAD_WRAPPER: Initializeing DYAD wrapper\n");
 
@@ -184,7 +178,7 @@ void dyad_sync_init (void)
     }
 
     int rc = dyad_init(debug, check, shared_storage, key_depth, 
-            key_bins, kvs_namespace, managed_path, &ctx);
+            key_bins, kvs_namespace, managed_path, intercept, &ctx);
 
     if (DYAD_IS_ERROR(rc))
     {
@@ -367,7 +361,7 @@ real_call:; // semicolon here to avoid the error
 
   #if DYAD_SYNC_DIR
     if (to_sync) {
-        sync_directory (path);
+        dyad_sync_directory (ctx, path);
     }
   #endif // DYAD_SYNC_DIR
 
@@ -436,7 +430,7 @@ real_call:;
 
   #if DYAD_SYNC_DIR
     if (to_sync) {
-        sync_directory (path);
+        dyad_sync_directory (ctx, path);
     }
   #endif // DYAD_SYNC_DIR
 
@@ -456,77 +450,6 @@ real_call:;
 
     return rc;
 }
-
-int open_real (const char *path, int oflag, ...)
-{
-    typedef int (*open_real_ptr_t) (const char *, int, mode_t, ...);
-    open_real_ptr_t func_ptr = (open_real_ptr_t) dlsym (RTLD_NEXT, "open");
-    char *error = NULL;
-
-    if ((error = dlerror ())) {
-        DPRINTF ("DYAD: open() error in dlsym: %s\n", error);
-        return -1;
-    }
-
-    int mode = 0;
-
-    if (oflag & O_CREAT)
-    {
-        va_list arg;
-        va_start (arg, oflag);
-        mode = va_arg (arg, int);
-        va_end (arg);
-    }
-
-    return (func_ptr (path, oflag, mode));
-}
-
-int close_real (int fd)
-{
-    typedef int (*close_real_ptr_t) (int);
-    close_real_ptr_t func_ptr = (close_real_ptr_t) dlsym (RTLD_NEXT, "close");
-    char *error = NULL;
-
-    if ((error = dlerror ())) {
-        DPRINTF ("DYAD: close() error in dlsym: %s\n", error);
-        return -1; // return the failure code
-    }
-
-    return func_ptr (fd);
-}
-
-#if DYAD_SYNC_DIR
-int sync_directory (const char* path)
-{ // Flush new directory entry https://lwn.net/Articles/457671/
-    char path_copy [PATH_MAX+1] = {'\0'};
-    int odir_fd = -1;
-    char *odir = NULL;
-    bool reenter = false;
-    int rc = 0;
-
-    strncpy (path_copy, path, PATH_MAX);
-    odir = dirname (path_copy);
-
-    reenter = ctx->reenter; // backup ctx->reenter
-    if (ctx != NULL) ctx->reenter = false;
-
-    if ((odir_fd = open_real (odir, O_RDONLY)) < 0) {
-        IPRINTF ("Cannot open the directory \"%s\"\n", odir);
-        rc = -1;
-    } else {
-        if (fsync (odir_fd) < 0) {
-            IPRINTF ("Cannot flush the directory \"%s\"\n", odir);
-            rc = -1;
-        }
-        if (close_real (odir_fd) < 0) {
-            IPRINTF ("Cannot close the directory \"%s\"\n", odir);
-            rc = -1;
-        }
-    }
-    if (ctx != NULL) ctx->reenter = reenter;
-    return rc;
-}
-#endif // DYAD_SYNC_DIR
 
 /*
  * vi: ts=4 sw=4 expandtab

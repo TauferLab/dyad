@@ -1,9 +1,11 @@
 #include "core.h"
+#include "dyad_core.h"
 #include "dyad_err.h"
 #include "utils.h"
 #include "murmur3.h"
 
 #include <string.h>
+#include <fcntl.h>
 
 FILE *fopen_real(const char *path, const char *mode)
 {
@@ -28,6 +30,47 @@ FILE *dyad_fopen(dyad_ctx_t *ctx, const char *path, const char *mode)
     return fopen(path, mode);
 }
 
+int open_real (const char *path, int oflag, ...)
+{
+    typedef int (*open_real_ptr_t) (const char *, int, mode_t, ...);
+    open_real_ptr_t func_ptr = (open_real_ptr_t) dlsym (RTLD_NEXT, "open");
+    char *error = NULL;
+
+    if ((error = dlerror ())) {
+        DPRINTF ("DYAD: open() error in dlsym: %s\n", error);
+        return -1;
+    }
+
+    int mode = 0;
+
+    if (oflag & O_CREAT)
+    {
+        va_list arg;
+        va_start (arg, oflag);
+        mode = va_arg (arg, int);
+        va_end (arg);
+    }
+
+    return (func_ptr (path, oflag, mode));
+}
+
+int dyad_open(dyad_ctx_t *ctx, const char *path, int oflag, ...)
+{
+    int mode;
+    if (oflag & O_CREAT)
+    {
+        va_list arg;
+        va_start(arg, oflag);
+        mode = va_arg(arg, int);
+        va_end(arg);
+    }
+    if (ctx->intercept)
+    {
+        return open_real(path, oflag, mode);
+    }
+    return open(path, oflag, mode);
+}
+
 int fclose_real(FILE *fp)                 
 {                                         
     typedef int (*fclose_real_ptr_t) (FILE *);
@@ -49,6 +92,29 @@ int dyad_fclose(dyad_ctx_t *ctx, FILE *fp)
         return fclose_real(fp);
     }
     return fclose(fp);
+}
+
+int close_real (int fd)
+{
+    typedef int (*close_real_ptr_t) (int);
+    close_real_ptr_t func_ptr = (close_real_ptr_t) dlsym (RTLD_NEXT, "close");
+    char *error = NULL;
+
+    if ((error = dlerror ())) {
+        DPRINTF ("DYAD: close() error in dlsym: %s\n", error);
+        return -1; // return the failure code
+    }
+
+    return func_ptr (fd);
+}
+
+int dyad_close(dyad_ctx_t *ctx, int fd)
+{
+    if (ctx->intercept)
+    {
+        return close_real(fd);
+    }
+    return close(fd);
 }
 
 int gen_path_key (const char* str, char* path_key, const size_t len,
@@ -89,7 +155,7 @@ int gen_path_key (const char* str, char* path_key, const size_t len,
 int dyad_init(bool debug, bool check, bool shared_storage,
         unsigned int key_depth, unsigned int key_bins, 
         const char *kvs_namespace, const char *managed_path,
-        dyad_ctx_t **ctx)
+        bool intercept, dyad_ctx_t **ctx)
 {
     if (*ctx != NULL)
     {
@@ -115,6 +181,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     (*ctx)->shared_storage = shared_storage;
     (*ctx)->key_depth = key_depth;   
     (*ctx)->key_bins = key_bins;
+    (*ctx)->intercept = intercept;
     (*ctx)->kvs_namespace = (char*) malloc(strlen(kvs_namespace)+1);
     if ((*ctx)->kvs_namespace == NULL)
     {
@@ -484,3 +551,36 @@ int dyad_finalize(dyad_ctx_t *ctx)
     ctx = NULL;
     return 0;
 }
+
+#if DYAD_SYNC_DIR
+int dyad_sync_directory(dyad_ctx_t *ctx, const char *path)
+{ // Flush new directory entry https://lwn.net/Articles/457671/
+    char path_copy [PATH_MAX+1] = {'\0'};
+    int odir_fd = -1;
+    char *odir = NULL;
+    bool reenter = false;
+    int rc = 0;
+
+    strncpy (path_copy, path, PATH_MAX);
+    odir = dirname (path_copy);
+
+    reenter = ctx->reenter; // backup ctx->reenter
+    if (ctx != NULL) ctx->reenter = false;
+
+    if ((odir_fd = dyad_open (ctx, odir, O_RDONLY)) < 0) {
+        IPRINTF ("Cannot open the directory \"%s\"\n", odir);
+        rc = -1;
+    } else {
+        if (fsync (odir_fd) < 0) {
+            IPRINTF ("Cannot flush the directory \"%s\"\n", odir);
+            rc = -1;
+        }
+        if (dyad_close (ctx, odir_fd) < 0) {
+            IPRINTF ("Cannot close the directory \"%s\"\n", odir);
+            rc = -1;
+        }
+    }
+    if (ctx != NULL) ctx->reenter = reenter;
+    return rc;
+}
+#endif
