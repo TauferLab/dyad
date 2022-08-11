@@ -58,6 +58,22 @@
 
 static __thread bool debug_dyad_utils = false;
 
+bool file_in_read_mode(FILE *f)
+{
+    return fd_in_read_mode(fileno(f));
+}
+
+bool fd_in_read_mode(int fd)
+{
+    int mode = fcntl(fd, F_GETFL);
+    int acc_mode = mode & O_ACCMODE;
+    if (acc_mode == O_RDONLY || acc_mode == O_RDWR)
+    {
+        // TODO check if read-write should count as read
+        return true;
+    }
+    return false;
+}
 
 void enable_debug_dyad_utils (void)
 {

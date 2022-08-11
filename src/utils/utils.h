@@ -29,6 +29,9 @@
 extern "C" {
 #endif // defined(__cplusplus)
 
+bool file_in_read_mode(FILE *f);
+bool fd_in_read_mode(int fd);
+
 void enable_debug_dyad_utils (void);
 void disable_debug_dyad_utils (void);
 bool check_debug_dyad_utils (void);
