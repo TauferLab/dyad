@@ -1,6 +1,7 @@
 #include "core.h"
 #include "dyad_err.h"
 #include "utils.h"
+#include "murmur3.h"
 
 #include <string.h>
 
@@ -49,6 +50,41 @@ int dyad_fclose(dyad_ctx_t *ctx, FILE *fp)
     }
     return fclose(fp);
 }
+
+int gen_path_key (const char* str, char* path_key, const size_t len,
+    const uint32_t depth, const uint32_t width)
+{
+    static const uint32_t seeds [10]
+        = {104677, 104681, 104683, 104693, 104701,
+           104707, 104711, 104717, 104723, 104729};
+
+    uint32_t seed = 57;
+    uint32_t hash[4] = {0u}; // Output for the hash
+    size_t cx = 0ul;
+    int n = 0;
+
+    if (path_key == NULL || len == 0ul) {
+        return -1;
+    }
+    path_key [0] = '\0';
+
+    for (uint32_t d = 0u; d < depth; d++)
+    {
+        seed += seeds [d % 10];
+        MurmurHash3_x64_128 (str, strlen (str), seed, hash);
+        uint32_t bin = (hash[0] ^ hash[1] ^ hash[2] ^ hash[3]) % width;
+        n = snprintf (path_key+cx, len-cx, "%x.", bin);
+        cx += n;
+        if (cx >= len || n < 0) {
+            return -1;
+        }
+    }
+    n = snprintf (path_key+cx, len-cx, "%s", str);
+    if (cx + n >= len || n < 0) {
+        return -1;
+    }
+    return 0;
+}
                                           
 int dyad_init(bool debug, bool check, bool shared_storage,
         unsigned int key_depth, unsigned int key_bins, 
@@ -80,12 +116,27 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     (*ctx)->key_depth = key_depth;   
     (*ctx)->key_bins = key_bins;
     (*ctx)->kvs_namespace = (char*) malloc(strlen(kvs_namespace)+1);
+    if ((*ctx)->kvs_namespace == NULL)
+    {
+        // TODO Indicate error
+        free(*ctx);
+        *ctx = NULL;
+        return DYAD_NOCTX;
+    }
     strncpy(
         (*ctx)->kvs_namespace,
         kvs_namespace,
         strlen(kvs_namespace)+1
     );
     (*ctx)->managed_path = (char*) malloc(strlen(managed_path)+1);
+    if ((*ctx)->managed_path == NULL)
+    {
+        // TODO Indicate error
+        free((*ctx)->kvs_namespace);
+        free(*ctx);
+        *ctx = NULL;
+        return DYAD_NOCTX;
+    }
     strncpy(
         (*ctx)->managed_path,
         managed_path,
@@ -265,7 +316,6 @@ int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
         // TODO log error                 
         return 0;
     }                                     
-    ctx->reenter = false;                 
     uint32_t owner_rank = 0;              
     const size_t topic_len = PATH_MAX;    
     char topic[topic_len+1];
@@ -339,7 +389,7 @@ int dyad_rpc_get(dyad_ctx_t *ctx, dyad_kvs_response_t *kvs_data,
     }
     return DYAD_OK;
 }                                         
-                                          
+
 int dyad_pull(dyad_ctx_t *ctx, const char* fname, 
         dyad_kvs_response_t *kvs_data)    
 {                                         
@@ -361,6 +411,8 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
     {                                     
         goto pull_done;
     }                                     
+
+    ctx->reenter = false;                 
                                           
     strncpy (file_path, consumer_path, PATH_MAX-1);
     concat_str (file_path, user_path, "/", PATH_MAX);
@@ -392,7 +444,7 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
         goto pull_done;
     }
     rc = dyad_fclose(ctx, of);
-    ctx->reenter = true;
+
     if (rc != 0)
     {
         rc = DYAD_BADFIO;
@@ -401,6 +453,7 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
     rc = DYAD_OK;
 
 pull_done:
+    ctx->reenter = true;
     if (rc == DYAD_OK && (ctx && ctx->check))
         setenv (DYAD_CHECK_ENV, "ok", 1);
     return DYAD_OK;

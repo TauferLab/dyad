@@ -5,9 +5,51 @@
 
 #ifdef __cplusplus
 #include <cstdlib>
+#include <cstdio>
 #else
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
+#endif
+
+/*****************************************************************************
+ *                                                                           *
+ *                          DYAD Macro Definitions                           *
+ *                                                                           *
+ *****************************************************************************/
+
+#define DYAD_KIND_PROD_ENV "DYAD_KIND_PRODUCER"
+#define DYAD_KIND_CONS_ENV "DYAD_KIND_CONSUMER"
+#define DYAD_PATH_PROD_ENV "DYAD_PATH_PRODUCER"
+#define DYAD_PATH_CONS_ENV "DYAD_PATH_CONSUMER"
+#define DYAD_CHECK_ENV     "DYAD_SYNC_HEALTH"
+#define DYAD_PATH_DELIM    "/"
+
+// Debug message
+#ifndef DPRINTF
+#define DPRINTF(fmt,...) do { \
+    if (ctx && ctx->debug) fprintf (stderr, fmt, ##__VA_ARGS__); \
+} while (0)
+#endif // DPRINTF
+
+#define TIME_DIFF(Tstart, Tend ) \
+    ((double) (1000000000L * ((Tend).tv_sec  - (Tstart).tv_sec) + \
+                              (Tend).tv_nsec - (Tstart).tv_nsec) / 1000000000L)
+
+// Detailed information message that can be omitted
+#if DYAD_FULL_DEBUG
+#define IPRINTF DPRINTF
+#define IPRINTF_DEFINED
+#else
+#define IPRINTF(fmt,...)
+#endif // DYAD_FULL_DEBUG
+
+#if !defined(DYAD_LOGGING_ON) || (DYAD_LOGGING_ON == 0)
+#define FLUX_LOG_INFO(...) do {} while (0)
+#define FLUX_LOG_ERR(...) do {} while (0)
+#else
+#define FLUX_LOG_INFO(...) flux_log (ctx->h, LOG_INFO, __VA_ARGS__)
+#define FLUX_LOG_ERR(...) flux_log_error (ctx->h, __VA_ARGS__)
 #endif
 
 #ifdef __cplusplus
