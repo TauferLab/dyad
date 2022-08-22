@@ -18,13 +18,13 @@ FILE *fopen_real(const char *path, const char *mode)
         return NULL;
     }
 
-    return (func_ptr (path, mode));
-}
-
+    return (func_ptr (path, mode));        
+}                                          
+                                           
 FILE *dyad_fopen(dyad_ctx_t *ctx, const char *path, const char *mode)
-{
-    if (ctx->intercept)
-    {
+{                                          
+    if (ctx->intercept)                    
+    {                                      
         return fopen_real(path, mode);
     }
     return fopen(path, mode);
@@ -154,8 +154,8 @@ int gen_path_key (const char* str, char* path_key, const size_t len,
                                           
 int dyad_init(bool debug, bool check, bool shared_storage,
         unsigned int key_depth, unsigned int key_bins, 
-        const char *kvs_namespace, const char *managed_path,
-        bool intercept, dyad_ctx_t **ctx)
+        const char *kvs_namespace, const char *prod_managed_path,
+        const char *cons_managed_path, bool intercept, dyad_ctx_t **ctx)
 {
     if (*ctx != NULL)
     {
@@ -195,8 +195,8 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         kvs_namespace,
         strlen(kvs_namespace)+1
     );
-    (*ctx)->managed_path = (char*) malloc(strlen(managed_path)+1);
-    if ((*ctx)->managed_path == NULL)
+    (*ctx)->prod_managed_path = (char*) malloc(strlen(prod_managed_path)+1);
+    if ((*ctx)->prod_managed_path == NULL)
     {
         // TODO Indicate error
         free((*ctx)->kvs_namespace);
@@ -205,9 +205,24 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         return DYAD_NOCTX;
     }
     strncpy(
-        (*ctx)->managed_path,
-        managed_path,
-        strlen(managed_path)+1
+        (*ctx)->prod_managed_path,
+        prod_managed_path,
+        strlen(prod_managed_path)+1
+    );
+    (*ctx)->cons_managed_path = (char*) malloc(strlen(cons_managed_path)+1);
+    if ((*ctx)->cons_managed_path == NULL)
+    {
+        // TODO Indicate error
+        free((*ctx)->kvs_namespace);
+        free((*ctx)->prod_managed_path);
+        free(*ctx);
+        *ctx = NULL;
+        return DYAD_NOCTX;
+    }
+    strncpy(
+        (*ctx)->cons_managed_path,
+        cons_managed_path,
+        strlen(cons_managed_path)+1
     );
     (*ctx)->reenter = true;
     (*ctx)->h = flux_open(NULL, 0);
@@ -274,7 +289,7 @@ int dyad_kvs_commit(dyad_ctx_t *ctx, flux_kvs_txn_t *txn,
 
 int publish_via_flux(dyad_ctx_t* ctx, const char *upath)
 {
-    const char *managed_path = ctx->managed_path;
+    const char *prod_managed_path = ctx->prod_managed_path;
     flux_kvs_txn_t *txn = NULL;
     flux_future_t *f = NULL;
     const size_t topic_len = PATH_MAX;
@@ -322,7 +337,7 @@ int dyad_commit(dyad_ctx_t *ctx, const char *fname)
     }
     int rc = -1;
     char upath[PATH_MAX] = {'\0'};
-    if (!cmp_canonical_path_prefix (ctx->managed_path, fname, upath, PATH_MAX)) 
+    if (!cmp_canonical_path_prefix (ctx->prod_managed_path, fname, upath, PATH_MAX)) 
     {
         // TODO log error
         rc = 0;
@@ -378,7 +393,7 @@ int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
     }
     int rc = -1;
     char upath[PATH_MAX] = {'\0'};
-    if (!cmp_canonical_path_prefix(ctx->managed_path, fname, upath, PATH_MAX))
+    if (!cmp_canonical_path_prefix(ctx->cons_managed_path, fname, upath, PATH_MAX))
     {
         // TODO log error                 
         return 0;
@@ -546,7 +561,8 @@ int dyad_finalize(dyad_ctx_t *ctx)
     }
     flux_close(ctx->h);
     free(ctx->kvs_namespace);
-    free(ctx->managed_path);
+    free(ctx->prod_managed_path);
+    free(ctx->cons_managed_path);
     free(ctx);
     ctx = NULL;
     return 0;

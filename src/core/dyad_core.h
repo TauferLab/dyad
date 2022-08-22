@@ -18,8 +18,6 @@
  *                                                                           *
  *****************************************************************************/
 
-#define DYAD_KIND_PROD_ENV "DYAD_KIND_PRODUCER"
-#define DYAD_KIND_CONS_ENV "DYAD_KIND_CONSUMER"
 #define DYAD_PATH_PROD_ENV "DYAD_PATH_PRODUCER"
 #define DYAD_PATH_CONS_ENV "DYAD_PATH_CONSUMER"
 #define DYAD_CHECK_ENV     "DYAD_SYNC_HEALTH"
@@ -37,12 +35,12 @@
                               (Tend).tv_nsec - (Tstart).tv_nsec) / 1000000000L)
 
 // Detailed information message that can be omitted
-#if DYAD_FULL_DEBUG
-#define IPRINTF DPRINTF
-#define IPRINTF_DEFINED
-#else
-#define IPRINTF(fmt,...)
-#endif // DYAD_FULL_DEBUG
+#if DYAD_FULL_DEBUG                       
+#define IPRINTF DPRINTF                   
+#define IPRINTF_DEFINED                   
+#else                                     
+#define IPRINTF(fmt,...)                  
+#endif // DYAD_FULL_DEBUG                 
 
 #if !defined(DYAD_LOGGING_ON) || (DYAD_LOGGING_ON == 0)
 #define FLUX_LOG_INFO(...) do {} while (0)
@@ -60,7 +58,6 @@ extern "C"
 /**
  * @struct dyad_ctx
  */
-// TODO Add sync_started
 struct dyad_ctx {
     flux_t *h; // the Flux handle for DYAD 
     bool debug; // if true, perform debug logging
@@ -73,7 +70,8 @@ struct dyad_ctx {
     unsigned int key_bins; // Number of bins for the Flux KVS
     uint32_t rank; // Flux rank for DYAD   
     char *kvs_namespace; // Flux KVS namespace for DYAD
-    char *managed_path; // path managed by DYAD
+    char *prod_managed_path; // producer path managed by DYAD
+    char *cons_managed_path; // consumer path managed by DYAD
     bool intercept; // if true, intercepts (f)open and (f)close
 } dyad_ctx_default = {                     
     NULL,                                  
@@ -110,12 +108,12 @@ typedef struct dyad_kvs_response dyad_kvs_response_t;
  * @param[out] ctx            the newly initialized context
  *
  * @return An integer error code (values TBD)
- */
+ */                                       
 int dyad_init(bool debug, bool check, bool shared_storage,
         unsigned int key_depth, unsigned int key_bins, 
-        const char *kvs_namespace, const char* managed_path,
-        bool intercept, dyad_ctx_t **ctx);
-
+        const char *kvs_namespace, const char* prod_managed_path,
+        const char *cons_managed_path, bool intercept, dyad_ctx_t **ctx);
+                                          
 /**
  * @brief Wrapper function that performs all the common tasks needed
  *        of a producer
