@@ -48,60 +48,6 @@ static void dyad_sync_fini (void) __attribute__((destructor));
 
 /*****************************************************************************
  *                                                                           *
- *                   DYAD Sync Internal API                                  *
- *                                                                           *
- *****************************************************************************/
-
-static inline bool is_dyad_producer ()
-{
-    char *e = NULL;
-    if ((e = getenv (DYAD_KIND_PROD_ENV)))
-        return (atoi (e) > 0);
-    return false;
-}
-
-static inline bool is_dyad_consumer ()
-{
-    char *e = NULL;
-    if ((e = getenv (DYAD_KIND_CONS_ENV)))
-        return (atoi (e) > 0);
-    return false;
-}
-
-int close_sync (const char *path)
-{
-    int rc = -1;
-    const char *dyad_path = NULL;
-    char upath [PATH_MAX] = {'\0'};
-
-    if (!(dyad_path = getenv (DYAD_PATH_PROD_ENV))) {
-        rc = 0;
-        if ((dyad_path = getenv (DYAD_PATH_CONS_ENV))) {
-            IPRINTF ("DYAD_SYNC CLOSE: no need to sync consumer close (\"%s\")\n", path);
-        } else {
-            IPRINTF ("DYAD_SYNC CLOSE not enabled for \"%s\".\n", path);
-        }
-        goto done;
-    }
-
-    if (cmp_canonical_path_prefix (dyad_path, path, upath, PATH_MAX)) {
-        rc = dyad_close_sync (path, dyad_path, upath);
-    } else {
-        IPRINTF ("DYAD_SYNC CLOSE: %s is not a prefix of %s.\n", \
-                 dyad_path, path);
-        rc = 0;
-    }
-
-done:
-    if (rc == 0 && (ctx && ctx->check))
-        setenv (DYAD_CHECK_ENV, "ok", 1);
-
-    return rc;
-}
-
-
-/*****************************************************************************
- *                                                                           *
  *         DYAD Sync Constructor, Destructor and Wrapper API                 *
  *                                                                           *
  *****************************************************************************/
@@ -116,7 +62,8 @@ void dyad_sync_init (void)
     unsigned int key_depth = 0;
     unsigned int key_bins = 0;
     char *kvs_namespace = NULL;
-    char *managed_path = NULL;
+    char *prod_managed_path = NULL;
+    char *cons_managed_path = NULL;
     bool intercept = true;
 
     DPRINTF ("DYAD_WRAPPER: Initializeing DYAD wrapper\n");
@@ -154,31 +101,26 @@ void dyad_sync_init (void)
     else
         kvs_namespace = NULL;
 
-    if (is_dyad_consumer())
+    if ((e = getenv(DYAD_PATH_CONS_ENV)))
     {
-        if ((e = getenv(DYAD_PATH_CONS_ENV)))
-        {
-            managed_path = e;
-        }
-        else
-        {
-            managed_path = NULL;
-        }
+        cons_managed_path = e;
     }
     else
     {
-        if ((e = getenv(DYAD_PATH_PROD_ENV)))
-        {
-            managed_path = e;
-        }
-        else
-        {
-            managed_path = NULL;
-        }
+        cons_managed_path = NULL;
+    }
+    if ((e = getenv(DYAD_PATH_PROD_ENV)))
+    {
+        prod_managed_path = e;
+    }
+    else
+    {
+        prod_managed_path = NULL;
     }
 
     int rc = dyad_init(debug, check, shared_storage, key_depth, 
-            key_bins, kvs_namespace, managed_path, intercept, &ctx);
+            key_bins, kvs_namespace, prod_managed_path,
+            cons_managed_path, intercept, &ctx);
 
     if (DYAD_IS_ERROR(rc))
     {
@@ -252,6 +194,10 @@ int open (const char *path, int oflag, ...)
         goto real_call;
     }
 
+    if (!oflag_is_read(oflag)) {
+        goto real_call;
+    }
+
     if (!(ctx && ctx->h) || (ctx && !ctx->reenter)) {
         IPRINTF ("DYAD_SYNC: open sync not applicable for \"%s\".\n", path);
         goto real_call;
@@ -292,6 +238,11 @@ FILE *fopen (const char *path, const char *mode)
 
     if (is_path_dir (path)) {
         // TODO: make sure if the directory mode is consistent
+        goto real_call;
+    }
+    
+    if (!mode_is_read(mode))
+    {
         goto real_call;
     }
 
@@ -345,6 +296,12 @@ int close (int fd)
 
     if (is_fd_dir (fd)) {
         // TODO: make sure if the directory mode is consistent
+        goto real_call;
+    }
+
+    if (fd_in_read_mode(fd))
+    {
+        to_sync = false;
         goto real_call;
     }
 
@@ -414,6 +371,12 @@ int fclose (FILE *fp)
 
     if (is_fd_dir (fileno (fp))) {
         // TODO: make sure if the directory mode is consistent
+        goto real_call;
+    }
+
+    if (file_in_read_mode(fp))
+    {
+        to_sync = false;
         goto real_call;
     }
 
