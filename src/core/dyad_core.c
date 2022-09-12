@@ -1,11 +1,29 @@
-#include "core.h"
 #include "dyad_core.h"
 #include "dyad_err.h"
 #include "utils.h"
 #include "murmur3.h"
 
-#include <string.h>
+#include <dlfcn.h>
 #include <fcntl.h>
+#include <libgen.h>
+#include <limits.h>
+#include <string.h>
+#include <unistd.h>
+
+const struct dyad_ctx dyad_ctx_default = {                     
+    NULL,                                  
+    false,                                 
+    false,                           
+    false,                           
+    true,                            
+    false,
+    false,
+    3u,
+    1024u,
+    0u,
+    NULL,
+    NULL
+};
 
 FILE *fopen_real(const char *path, const char *mode)
 {
@@ -14,7 +32,6 @@ FILE *fopen_real(const char *path, const char *mode)
     char *error = NULL;
 
     if ((error = dlerror ())) {
-        // TODO log error
         return NULL;
     }
 
@@ -25,7 +42,12 @@ FILE *dyad_fopen(dyad_ctx_t *ctx, const char *path, const char *mode)
 {                                          
     if (ctx->intercept)                    
     {                                      
-        return fopen_real(path, mode);
+        FILE* fobj = fopen_real(path, mode);
+        if (fobj == NULL)
+        {
+            // TODO log error
+        }
+        return fobj;
     }
     return fopen(path, mode);
 }
@@ -36,8 +58,7 @@ int open_real (const char *path, int oflag, ...)
     open_real_ptr_t func_ptr = (open_real_ptr_t) dlsym (RTLD_NEXT, "open");
     char *error = NULL;
 
-    if ((error = dlerror ())) {
-        DPRINTF ("DYAD: open() error in dlsym: %s\n", error);
+    if (dlerror ()) {
         return -1;
     }
 
@@ -66,7 +87,12 @@ int dyad_open(dyad_ctx_t *ctx, const char *path, int oflag, ...)
     }
     if (ctx->intercept)
     {
-        return open_real(path, oflag, mode);
+        int fp = open_real(path, oflag, mode);
+        if (fp < 0)
+        {
+            // TODO log error
+        }
+        return fp;
     }
     return open(path, oflag, mode);
 }
@@ -78,7 +104,6 @@ int fclose_real(FILE *fp)
     char *error = NULL;                   
                                           
     if ((error = dlerror ())) {           
-        DPRINTF ("DYAD: fclose() error in dlsym: %s\n", error);
         return EOF; // return the failure code
     }
 
@@ -89,7 +114,12 @@ int dyad_fclose(dyad_ctx_t *ctx, FILE *fp)
 {
     if (ctx->intercept)
     {
-        return fclose_real(fp);
+        int rc = fclose_real(fp);
+        if (rc < 0)
+        {
+            // TODO log error
+        }
+        return rc;
     }
     return fclose(fp);
 }
@@ -101,7 +131,6 @@ int close_real (int fd)
     char *error = NULL;
 
     if ((error = dlerror ())) {
-        DPRINTF ("DYAD: close() error in dlsym: %s\n", error);
         return -1; // return the failure code
     }
 
@@ -112,7 +141,12 @@ int dyad_close(dyad_ctx_t *ctx, int fd)
 {
     if (ctx->intercept)
     {
-        return close_real(fd);
+        int rc = close_real(fd);
+        if (rc < 0)
+        {
+            // TODO log error
+        }
+        return rc;
     }
     return close(fd);
 }
@@ -496,14 +530,14 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
 
     ctx->reenter = false;                 
                                           
-    strncpy (file_path, consumer_path, PATH_MAX-1);
-    concat_str (file_path, user_path, "/", PATH_MAX);
+    strncpy (file_path, ctx->cons_managed_path, PATH_MAX-1);
+    concat_str (file_path, kvs_data->fpath, "/", PATH_MAX);
     strncpy (file_path_copy, file_path, PATH_MAX); // dirname modifies the arg
 
     // Create the directory as needed     
     // TODO: Need to be consistent with the mode at the source
     odir = dirname (file_path_copy);      
-    m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
+    mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     if ((strncmp (odir, ".", strlen(".")) != 0) &&
         (mkdir_as_needed (odir, m) < 0)) {
         // TODO log that dirs could not be created
@@ -584,15 +618,15 @@ int dyad_sync_directory(dyad_ctx_t *ctx, const char *path)
     if (ctx != NULL) ctx->reenter = false;
 
     if ((odir_fd = dyad_open (ctx, odir, O_RDONLY)) < 0) {
-        IPRINTF ("Cannot open the directory \"%s\"\n", odir);
+        IPRINTF (ctx, "Cannot open the directory \"%s\"\n", odir);
         rc = -1;
     } else {
         if (fsync (odir_fd) < 0) {
-            IPRINTF ("Cannot flush the directory \"%s\"\n", odir);
+            IPRINTF (ctx, "Cannot flush the directory \"%s\"\n", odir);
             rc = -1;
         }
         if (dyad_close (ctx, odir_fd) < 0) {
-            IPRINTF ("Cannot close the directory \"%s\"\n", odir);
+            IPRINTF (ctx, "Cannot close the directory \"%s\"\n", odir);
             rc = -1;
         }
     }

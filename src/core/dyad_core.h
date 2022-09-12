@@ -3,6 +3,8 @@
 
 #include <flux/core.h>
 
+#include "dyad_err.h"
+
 #ifdef __cplusplus
 #include <cstdlib>
 #include <cstdio>
@@ -21,12 +23,13 @@
 #define DYAD_PATH_PROD_ENV "DYAD_PATH_PRODUCER"
 #define DYAD_PATH_CONS_ENV "DYAD_PATH_CONSUMER"
 #define DYAD_CHECK_ENV     "DYAD_SYNC_HEALTH"
-#define DYAD_PATH_DELIM    "/"
+// Now defined in src/utils/utils.h
+//#define DYAD_PATH_DELIM    "/"
 
 // Debug message
 #ifndef DPRINTF
-#define DPRINTF(fmt,...) do { \
-    if (ctx && ctx->debug) fprintf (stderr, fmt, ##__VA_ARGS__); \
+#define DPRINTF(curr_dyad_ctx, fmt,...) do { \
+    if (curr_dyad_ctx && curr_dyad_ctx->debug) fprintf (stderr, fmt, ##__VA_ARGS__); \
 } while (0)
 #endif // DPRINTF
 
@@ -39,15 +42,17 @@
 #define IPRINTF DPRINTF                   
 #define IPRINTF_DEFINED                   
 #else                                     
-#define IPRINTF(fmt,...)                  
+#define IPRINTF(curr_dyad_ctx, fmt,...)                  
 #endif // DYAD_FULL_DEBUG                 
 
 #if !defined(DYAD_LOGGING_ON) || (DYAD_LOGGING_ON == 0)
-#define FLUX_LOG_INFO(...) do {} while (0)
-#define FLUX_LOG_ERR(...) do {} while (0)
+#define FLUX_LOG_INFO(curr_dyad_ctx, ...) do {} while (0)
+#define FLUX_LOG_ERR(curr_dyad_ctx, ...) do {} while (0)
 #else
-#define FLUX_LOG_INFO(...) flux_log (ctx->h, LOG_INFO, __VA_ARGS__)
-#define FLUX_LOG_ERR(...) flux_log_error (ctx->h, __VA_ARGS__)
+#define FLUX_LOG_INFO(curr_dyad_ctx, ...) flux_log (\
+    curr_dyad_ctx->h, LOG_INFO, __VA_ARGS__)
+#define FLUX_LOG_ERR(curr_dyad_ctx, ...) flux_log_error (\
+    curr_dyad_ctxctx->h, __VA_ARGS__)
 #endif
 
 #ifdef __cplusplus
@@ -73,25 +78,13 @@ struct dyad_ctx {
     char *prod_managed_path; // producer path managed by DYAD
     char *cons_managed_path; // consumer path managed by DYAD
     bool intercept; // if true, intercepts (f)open and (f)close
-} dyad_ctx_default = {                     
-    NULL,                                  
-    false,                                 
-    false,                           
-    false,                           
-    true,                            
-    false,
-    false,
-    3u,
-    1024u,
-    0u,
-    NULL,
-    NULL
 };
+extern const struct dyad_ctx dyad_ctx_default;
 typedef struct dyad_ctx dyad_ctx_t;
 
 struct dyad_kvs_response {                 
-    const char *fpath;                     
-    uint32_t owner_rank                    
+    char *fpath;                     
+    uint32_t owner_rank; 
 };                                         
 typedef struct dyad_kvs_response dyad_kvs_response_t;
                                            

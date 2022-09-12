@@ -15,6 +15,8 @@
 #define _GNU_SOURCE
 #endif // _GNU_SOURCE
 
+#define DYAD_PATH_DELIM "/"
+
 #if defined(__cplusplus)
 //#include <cstdbool> // c++11
 #include <cstddef>
@@ -32,7 +34,7 @@ extern "C" {
 bool file_in_read_mode(FILE *f);
 bool fd_in_read_mode(int fd);
 bool oflag_is_read(int oflag);
-bool mode_is_read(char *mode);
+bool mode_is_read(const char *mode);
 
 void enable_debug_dyad_utils (void);
 void disable_debug_dyad_utils (void);

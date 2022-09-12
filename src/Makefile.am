@@ -1,1 +1,1 @@
-SUBDIRS = utils modules core wrapper cpp
+SUBDIRS = utils modules core wrapper stream

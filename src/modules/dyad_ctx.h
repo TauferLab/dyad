@@ -13,7 +13,6 @@
 
 #include <stdbool.h>
 #include <flux/core.h>
-#include "dyad_cpa.h"
 
 struct dyad_mod_ctx {
     flux_t *h;

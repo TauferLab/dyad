@@ -39,7 +39,6 @@
 #include <stdbool.h>
 #endif
 
-#include "dyad.h"
 #include "utils.h"
 
 // Debug message
@@ -66,7 +65,7 @@ bool file_in_read_mode(FILE *f)
 bool fd_in_read_mode(int fd)
 {
     int mode = fcntl(fd, F_GETFL);
-    return mode_is_read(mode);
+    return oflag_is_read(mode);
 }
 
 bool oflag_is_read(int oflag)
@@ -80,7 +79,7 @@ bool oflag_is_read(int oflag)
     return false;
 }
 
-bool mode_is_read(char *mode)
+bool mode_is_read(const char *mode)
 {
     return (strcmp(mode, "r") &&
             strcmp(mode, "r+") &&

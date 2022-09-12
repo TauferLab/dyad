@@ -81,7 +81,7 @@ void dyad_stream_core::init ()
     const char *prod_managed_path = NULL;
     bool intercept = false;
 
-    DPRINTF ("DYAD_WRAPPER: Initializeing DYAD wrapper\n");
+    DPRINTF (m_ctx, "DYAD_WRAPPER: Initializeing DYAD wrapper\n");
 
     if ((e = getenv ("DYAD_SYNC_DEBUG")) && (atoi (e) != 0)) {
         debug = true;
@@ -143,7 +143,7 @@ void dyad_stream_core::init ()
 
 void dyad_stream_core::init (const dyad_params& p)
 {
-    DPRINTF ("DYAD_WRAPPER: Initializeing DYAD wrapper\n");
+    DPRINTF (m_ctx, "DYAD_WRAPPER: Initializeing DYAD wrapper\n");
     int rc = dyad_init(p.m_debug, false, p.m_shared_storage,
             p.m_key_depth, p.m_key_bins, p.m_kvs_namespace.c_str(),
             p.m_prod_managed_path.c_str(), p.m_cons_managed_path.c_str(),
@@ -155,14 +155,14 @@ void dyad_stream_core::init (const dyad_params& p)
 
 void dyad_stream_core::log_info (const std::string& msg_head) const
 {
-    FLUX_LOG_INFO ("=== %s ===\n", msg_head.c_str ());
-    FLUX_LOG_INFO ("%s=%s\n", DYAD_PATH_CONS_ENV, m_ctx->cons_managed_path);
-    FLUX_LOG_INFO ("%s=%s\n", DYAD_PATH_PROD_ENV, m_ctx->prod_managed_path;
-    FLUX_LOG_INFO ("DYAD_SYNC_DEBUG=%s\n", (m_ctx->debug)? "true": "false");
-    FLUX_LOG_INFO ("DYAD_SHARED_STORAGE=%s\n", (m_ctx->shared_storage)? "true": "false");
-    FLUX_LOG_INFO ("DYAD_KEY_DEPTH=%u\n", m_ctx->key_depth);
-    FLUX_LOG_INFO ("DYAD_KEY_BINS=%u\n", m_ctx->key_bins);
-    FLUX_LOG_INFO ("FLUX_KVS_NAMESPACE=%s\n", m_ctx->kvs_namespace);
+    FLUX_LOG_INFO (m_ctx, "=== %s ===\n", msg_head.c_str ());
+    FLUX_LOG_INFO (m_ctx, "%s=%s\n", DYAD_PATH_CONS_ENV, m_ctx->cons_managed_path);
+    FLUX_LOG_INFO (m_ctx, "%s=%s\n", DYAD_PATH_PROD_ENV, m_ctx->prod_managed_path);
+    FLUX_LOG_INFO (m_ctx, "DYAD_SYNC_DEBUG=%s\n", (m_ctx->debug)? "true": "false");
+    FLUX_LOG_INFO (m_ctx, "DYAD_SHARED_STORAGE=%s\n", (m_ctx->shared_storage)? "true": "false");
+    FLUX_LOG_INFO (m_ctx, "DYAD_KEY_DEPTH=%u\n", m_ctx->key_depth);
+    FLUX_LOG_INFO (m_ctx, "DYAD_KEY_BINS=%u\n", m_ctx->key_bins);
+    FLUX_LOG_INFO (m_ctx, "FLUX_KVS_NAMESPACE=%s\n", m_ctx->kvs_namespace);
 }
 
 bool dyad_stream_core::is_dyad_producer ()
@@ -181,7 +181,7 @@ bool dyad_stream_core::is_dyad_consumer ()
 
 bool dyad_stream_core::open_sync (const char *path)
 {
-    IPRINTF ("DYAD_SYNC OPEN: enters sync (\"%s\").\n", path);
+    IPRINTF (m_ctx, "DYAD_SYNC OPEN: enters sync (\"%s\").\n", path);
     if (!m_initialized)
     {
         // TODO log
@@ -197,17 +197,17 @@ bool dyad_stream_core::open_sync (const char *path)
     rc = dyad_consume(m_ctx, path);
 
     if (DYAD_IS_ERROR(rc)) {
-        DPRINTF ("DYAD_SYNC OPEN: failed sync (\"%s\").\n", path);
+        DPRINTF (m_ctx, "DYAD_SYNC OPEN: failed sync (\"%s\").\n", path);
         return false;
     }
 
-    IPRINTF ("DYAD_SYNC OEPN: exists sync (\"%s\").\n", path);
+    IPRINTF (m_ctx, "DYAD_SYNC OEPN: exists sync (\"%s\").\n", path);
     return true;
 }
 
 bool dyad_stream_core::close_sync (const char *path)
 {
-    IPRINTF ("DYAD_SYNC CLOSE: enters sync (\"%s\").\n", path);
+    IPRINTF (m_ctx, "DYAD_SYNC CLOSE: enters sync (\"%s\").\n", path);
     if (!m_initialized)
     {
         // TODO log
@@ -222,12 +222,12 @@ bool dyad_stream_core::close_sync (const char *path)
                                      
     rc = dyad_produce(m_ctx, path);  
                                      
-    if (rc < 0) {                    
-        DPRINTF ("DYAD_SYNC CLOSE: failed sync (\"%s\").\n", path);
+    if (DYAD_IS_ERROR(rc)) {                    
+        DPRINTF (m_ctx, "DYAD_SYNC CLOSE: failed sync (\"%s\").\n", path);
         return false;
     }
 
-    IPRINTF ("DYAD_SYNC CLOSE: exists sync (\"%s\").\n", path);
+    IPRINTF (m_ctx, "DYAD_SYNC CLOSE: exists sync (\"%s\").\n", path);
     return true;
 }
 

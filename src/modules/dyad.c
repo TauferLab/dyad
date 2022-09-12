@@ -29,7 +29,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <flux/core.h>
-#include "dyad.h"
 #include "dyad_ctx.h"
 #include "utils.h"
 #include "read_all.h"
@@ -181,20 +180,6 @@ static dyad_mod_ctx_t *getctx (flux_t *h)
         ctx->t_sync_io_mod = 0.0;
         ctx->t_rpc_mod = 0.0;
       #endif // DYAD_PROFILE
-      #if DYAD_CPA
-        char *e = NULL;
-        ctx->t_rec_size = 0u;
-        ctx->t_rec_capacity = 0u;
-        if ((e = getenv (DYAD_NUM_CPA_PTS))) {
-            ctx->t_rec_capacity = (unsigned) atoi (e);
-        }
-        if (ctx->t_rec_capacity == 0u) {
-            ctx->t_rec_capacity = 1000u;
-        }
-        ctx->t_rec
-            = (dyad_cpa_t *) malloc (ctx->t_rec_capacity * sizeof (dyad_cpa_t));
-        ctx->cpa_outfile = NULL;
-      #endif // DYAD_CPA
         if (flux_aux_set (h, "dyad", ctx, freectx) < 0) {
             FLUX_LOG_ERR (h, "DYAD_MOD: flux_aux_set() failed!\n");
             goto error;
@@ -254,8 +239,6 @@ static void dyad_fetch_request_cb (flux_t *h, flux_msg_handler_t *w,
     clock_gettime(CLOCK_MONOTONIC_RAW, &t_1);
   #endif // DYAD_PROFILE
 
-    REC_TIME (ctx, CPA_RPC_START);
-
     strncpy (fullpath, ctx->dyad_path, PATH_MAX-1);
     concat_str (fullpath, upath, "/", PATH_MAX);
 
@@ -298,7 +281,6 @@ done:
   #if DYAD_PROFILE
     clock_gettime(CLOCK_MONOTONIC_RAW, &t_1);
   #endif // DYAD_PROFILE
-    REC_TIME (ctx, CPA_RPC_REP);
     //if (flux_respond_raw (h, msg, errno, inbuf, inlen) < 0)
     if (flux_respond_raw (h, msg, inbuf, inlen) < 0) {
         FLUX_LOG_ERR (h, "DYAD_MOD: %s: flux_respond", __FUNCTION__);
@@ -312,7 +294,6 @@ done:
     clock_gettime(CLOCK_MONOTONIC_RAW, &t_2);
     ctx->t_rpc_mod += TIME_DIFF(t_1, t_2);
   #endif // DYAD_PROFILE
-    REC_TIME (ctx, CPA_RPC_REP_FIN);
 #endif // DYAD_PERFFLOW
     errno = saved_errno;
     return;
