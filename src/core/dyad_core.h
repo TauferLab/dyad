@@ -60,6 +60,11 @@ extern "C"
 {
 #endif
 
+// Forward declare functions from libutils
+void enable_debug_dyad_utils (void);
+void disable_debug_dyad_utils (void);
+bool check_debug_dyad_utils (void);
+
 /**
  * @struct dyad_ctx
  */
