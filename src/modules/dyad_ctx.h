@@ -13,14 +13,17 @@
 
 #include <stdbool.h>
 #include <flux/core.h>
+#include <ucp/api/ucp.h>
 
 struct dyad_mod_ctx {
     flux_t *h;
     bool debug;
     flux_msg_handler_t **handlers;
     const char *dyad_path;
+    ucp_context_h ucx_ctx;
+    ucp_worker_h ucx_worker;
 } dyad_mod_ctx_default =
-    {NULL, false, NULL, NULL};
+    {NULL, false, NULL, NULL, NULL, NULL};
 
 typedef struct dyad_mod_ctx dyad_mod_ctx_t;
 
