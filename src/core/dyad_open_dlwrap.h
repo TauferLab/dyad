@@ -12,22 +12,3 @@ int dyad_fclose(dyad_ctx_t *ctx, FILE *fp);
 int dyad_close(dyad_ctx_t *ctx, int fd);
 
 #endif /* __DYAD_CORE_DYAD_OPEN_DLWRAP_H__ */
-
-
-
-
-
-
-
-
-
-
-
-
-                                     
-                                     
-                                     
-                                     
-                                     
-                                     
-                                     

@@ -9,27 +9,27 @@
 #include <string.h>
 #include <unistd.h>
 
-const struct dyad_ctx dyad_ctx_default = {                     
-    NULL,                                  
-    false,                                 
-    false,                           
-    false,                           
-    true,                            
+const struct dyad_ctx dyad_ctx_default = {
+    NULL,
+    false,
+    false,
+    false,
+    true,
     false,
     false,
     3u,
     1024u,
     0u,
     NULL,
-    NULL                             
-};                                   
-                                     
+    NULL
+};
+
 int gen_path_key (const char* str, char* path_key, const size_t len,
-    const uint32_t depth, const uint32_t width)
-{                                    
-    static const uint32_t seeds [10] 
+        const uint32_t depth, const uint32_t width)
+{
+    static const uint32_t seeds [10]
         = {104677, 104681, 104683, 104693, 104701,
-           104707, 104711, 104717, 104723, 104729};
+            104707, 104711, 104717, 104723, 104729};
 
     uint32_t seed = 57;
     uint32_t hash[4] = {0u}; // Output for the hash
@@ -58,9 +58,9 @@ int gen_path_key (const char* str, char* path_key, const size_t len,
     }
     return 0;
 }
-                                          
+
 int dyad_init(bool debug, bool check, bool shared_storage,
-        unsigned int key_depth, unsigned int key_bins, 
+        unsigned int key_depth, unsigned int key_bins,
         const char *kvs_namespace, const char *prod_managed_path,
         const char *cons_managed_path, bool intercept, dyad_ctx_t **ctx)
 {
@@ -69,24 +69,24 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         if ((*ctx)->initialized)
         {
             // TODO Indicate already initialized
-        }                                 
-        else                              
-        {                                 
-            **ctx = dyad_ctx_default;     
-        }                                 
-        return DYAD_OK;                   
-    }                                     
+        }
+        else
+        {
+            **ctx = dyad_ctx_default;
+        }
+        return DYAD_OK;
+    }
     *ctx = (dyad_ctx_t*) malloc(sizeof(dyad_ctx_t));
     if (*ctx == NULL)
     {
-        // TODO Indicate error       
+        // TODO Indicate error
         return DYAD_NOCTX;
-    }                                
-    **ctx = dyad_ctx_default;        
-    (*ctx)->debug = debug;           
-    (*ctx)->check = check;           
+    }
+    **ctx = dyad_ctx_default;
+    (*ctx)->debug = debug;
+    (*ctx)->check = check;
     (*ctx)->shared_storage = shared_storage;
-    (*ctx)->key_depth = key_depth;   
+    (*ctx)->key_depth = key_depth;
     (*ctx)->key_bins = key_bins;
     (*ctx)->intercept = intercept;
     (*ctx)->kvs_namespace = (char*) malloc(strlen(kvs_namespace)+1);
@@ -98,10 +98,10 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         return DYAD_NOCTX;
     }
     strncpy(
-        (*ctx)->kvs_namespace,
-        kvs_namespace,
-        strlen(kvs_namespace)+1
-    );
+            (*ctx)->kvs_namespace,
+            kvs_namespace,
+            strlen(kvs_namespace)+1
+           );
     (*ctx)->prod_managed_path = (char*) malloc(strlen(prod_managed_path)+1);
     if ((*ctx)->prod_managed_path == NULL)
     {
@@ -112,10 +112,10 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         return DYAD_NOCTX;
     }
     strncpy(
-        (*ctx)->prod_managed_path,
-        prod_managed_path,
-        strlen(prod_managed_path)+1
-    );
+            (*ctx)->prod_managed_path,
+            prod_managed_path,
+            strlen(prod_managed_path)+1
+           );
     (*ctx)->cons_managed_path = (char*) malloc(strlen(cons_managed_path)+1);
     if ((*ctx)->cons_managed_path == NULL)
     {
@@ -127,10 +127,10 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         return DYAD_NOCTX;
     }
     strncpy(
-        (*ctx)->cons_managed_path,
-        cons_managed_path,
-        strlen(cons_managed_path)+1
-    );
+            (*ctx)->cons_managed_path,
+            cons_managed_path,
+            strlen(cons_managed_path)+1
+           );
     (*ctx)->reenter = true;
     (*ctx)->h = flux_open(NULL, 0);
     if ((*ctx)->h == NULL)
@@ -177,6 +177,9 @@ int dyad_consume(dyad_ctx_t *ctx, const char *fname)
     return DYAD_OK;
 }
 
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int dyad_kvs_commit(dyad_ctx_t *ctx, flux_kvs_txn_t *txn,
         const char *upath, flux_future_t **f)
 {
@@ -194,6 +197,9 @@ int dyad_kvs_commit(dyad_ctx_t *ctx, flux_kvs_txn_t *txn,
     return DYAD_OK;
 }
 
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int publish_via_flux(dyad_ctx_t* ctx, const char *upath)
 {
     const char *prod_managed_path = ctx->prod_managed_path;
@@ -203,12 +209,12 @@ int publish_via_flux(dyad_ctx_t* ctx, const char *upath)
     char topic[topic_len+1];
     memset(topic, '\0', topic_len+1);
     gen_path_key(
-        upath,
-        topic,
-        topic_len,
-        ctx->key_depth,
-        ctx->key_bins
-    );
+            upath,
+            topic,
+            topic_len,
+            ctx->key_depth,
+            ctx->key_bins
+            );
     if (ctx->h == NULL)
     {
         // TODO Set correct ret val
@@ -234,9 +240,9 @@ int publish_via_flux(dyad_ctx_t* ctx, const char *upath)
     }
     return DYAD_OK;
 }
-                                     
+
 int dyad_commit(dyad_ctx_t *ctx, const char *fname)
-{ 
+{
     if (ctx == NULL)
     {
         // TODO log
@@ -244,7 +250,7 @@ int dyad_commit(dyad_ctx_t *ctx, const char *fname)
     }
     int rc = -1;
     char upath[PATH_MAX] = {'\0'};
-    if (!cmp_canonical_path_prefix (ctx->prod_managed_path, fname, upath, PATH_MAX)) 
+    if (!cmp_canonical_path_prefix (ctx->prod_managed_path, fname, upath, PATH_MAX))
     {
         // TODO log error
         rc = 0;
@@ -262,19 +268,22 @@ commit_done:
     return rc;
 }
 
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int dyad_kvs_lookup(dyad_ctx_t *ctx, const char* kvs_topic, uint32_t *owner_rank)
 {
     int rc = -1;
     flux_future_t *f = NULL;
     f = flux_kvs_lookup(ctx->h,
             ctx->kvs_namespace,
-            FLUX_KVS_WAITCREATE,          
-            kvs_topic                     
-        );                                
-    if (f == NULL)                        
-    {                                     
-        // TODO log                       
-        return DYAD_BADLOOKUP;                      
+            FLUX_KVS_WAITCREATE,
+            kvs_topic
+            );
+    if (f == NULL)
+    {
+        // TODO log
+        return DYAD_BADLOOKUP;
     }
     rc = flux_kvs_lookup_get_unpack(f, "i", owner_rank);
     if (f != NULL)
@@ -288,10 +297,10 @@ int dyad_kvs_lookup(dyad_ctx_t *ctx, const char* kvs_topic, uint32_t *owner_rank
         return DYAD_BADFETCH;
     }
     return DYAD_OK;
-}                                         
-                                          
-int dyad_fetch(dyad_ctx_t *ctx, const char* fname, 
-        dyad_kvs_response_t **resp)       
+}
+
+int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
+        dyad_kvs_response_t **resp)
 {
     if (ctx == NULL)
     {
@@ -302,27 +311,27 @@ int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
     char upath[PATH_MAX] = {'\0'};
     if (!cmp_canonical_path_prefix(ctx->cons_managed_path, fname, upath, PATH_MAX))
     {
-        // TODO log error                 
+        // TODO log error
         return 0;
-    }                                     
-    uint32_t owner_rank = 0;              
-    const size_t topic_len = PATH_MAX;    
+    }
+    uint32_t owner_rank = 0;
+    const size_t topic_len = PATH_MAX;
     char topic[topic_len+1];
     memset(topic, '\0', topic_len+1);
     gen_path_key(
-        upath,
-        topic,                            
-        topic_len,                        
-        ctx->key_depth,                   
-        ctx->key_bins                     
-    );                                    
-    if (ctx->h == NULL)                   
-    {                                     
-        // TODO log                       
-        return DYAD_NOCTX;                
-    }                                     
+            upath,
+            topic,
+            topic_len,
+            ctx->key_depth,
+            ctx->key_bins
+            );
+    if (ctx->h == NULL)
+    {
+        // TODO log
+        return DYAD_NOCTX;
+    }
     rc = dyad_kvs_lookup(ctx, topic, &owner_rank);
-    if (rc != DYAD_OK)                    
+    if (rc != DYAD_OK)
     {
         // TODO log error
         return rc;
@@ -330,36 +339,39 @@ int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
     if (ctx->shared_storage || (owner_rank == ctx->rank))
     {
         return 0;
-    }                                     
+    }
     *resp = malloc(sizeof(struct dyad_kvs_response));
-    if (*resp == NULL)                    
-    {                                     
-        // TODO log error                 
-        return DYAD_BADRESPONSE;                  
-    }                                     
+    if (*resp == NULL)
+    {
+        // TODO log error
+        return DYAD_BADRESPONSE;
+    }
     (*resp)->fpath = malloc(strlen(upath)+1);
     strncpy(
-        (*resp)->fpath,
-        upath,
-        strlen(upath)+1
-    );                                    
-    (*resp)->owner_rank = owner_rank;     
-    return DYAD_OK;                       
-}                                         
-                                          
+            (*resp)->fpath,
+            upath,
+            strlen(upath)+1
+           );
+    (*resp)->owner_rank = owner_rank;
+    return DYAD_OK;
+}
+
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int dyad_rpc_get(dyad_ctx_t *ctx, dyad_kvs_response_t *kvs_data,
         const char **file_data, int *file_len)
-{                                         
-    int rc = -1;                          
-    flux_future_t *f = NULL;              
-    f = flux_rpc_pack(ctx->h,             
-            "dyad.fetch",                 
-            kvs_data->owner_rank,         
-            0,                            
-            "{s:s}",                      
+{
+    int rc = -1;
+    flux_future_t *f = NULL;
+    f = flux_rpc_pack(ctx->h,
+            "dyad.fetch",
+            kvs_data->owner_rank,
+            0,
+            "{s:s}",
             "upath",
             kvs_data->fpath
-        );
+            );
     if (f == NULL)
     {
         // TODO log
@@ -377,13 +389,13 @@ int dyad_rpc_get(dyad_ctx_t *ctx, dyad_kvs_response_t *kvs_data,
         return DYAD_BADRPC;
     }
     return DYAD_OK;
-}                                         
+}
 
-int dyad_pull(dyad_ctx_t *ctx, const char* fname, 
-        dyad_kvs_response_t *kvs_data)    
-{                                         
-    if (ctx == NULL)                      
-    {                                     
+int dyad_pull(dyad_ctx_t *ctx, const char* fname,
+        dyad_kvs_response_t *kvs_data)
+{
+    if (ctx == NULL)
+    {
         // TODO log
         return DYAD_NOCTX;
     }
@@ -392,39 +404,39 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
     int file_len = 0;
     const char *odir = NULL;
     FILE *of = NULL;
-    char file_path [PATH_MAX+1] = {'\0'}; 
+    char file_path [PATH_MAX+1] = {'\0'};
     char file_path_copy [PATH_MAX+1] = {'\0'};
 
     rc = dyad_rpc_get(ctx, kvs_data, &file_data, &file_len);
-    if (rc != DYAD_OK)                    
-    {                                     
+    if (rc != DYAD_OK)
+    {
         goto pull_done;
-    }                                     
+    }
 
-    ctx->reenter = false;                 
-                                          
+    ctx->reenter = false;
+
     strncpy (file_path, ctx->cons_managed_path, PATH_MAX-1);
     concat_str (file_path, kvs_data->fpath, "/", PATH_MAX);
     strncpy (file_path_copy, file_path, PATH_MAX); // dirname modifies the arg
 
-    // Create the directory as needed     
+    // Create the directory as needed
     // TODO: Need to be consistent with the mode at the source
-    odir = dirname (file_path_copy);      
+    odir = dirname (file_path_copy);
     mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     if ((strncmp (odir, ".", strlen(".")) != 0) &&
-        (mkdir_as_needed (odir, m) < 0)) {
+            (mkdir_as_needed (odir, m) < 0)) {
         // TODO log that dirs could not be created
-        rc = DYAD_BADFIO;                 
-        goto pull_done;                   
-    }                                     
-                                          
-    of = dyad_fopen(ctx, file_path, "w");           
-    if (of == NULL)                       
-    {                                     
-        // TODO log that file could not be opened
-        rc = DYAD_BADFIO;               
+        rc = DYAD_BADFIO;
         goto pull_done;
-    }                                     
+    }
+
+    of = dyad_fopen(ctx, file_path, "w");
+    if (of == NULL)
+    {
+        // TODO log that file could not be opened
+        rc = DYAD_BADFIO;
+        goto pull_done;
+    }
     size_t written_len = fwrite(file_data, sizeof(char), (size_t) file_len, of);
     if (written_len != (size_t) file_len)
     {
@@ -449,12 +461,12 @@ pull_done:
 }
 
 int dyad_free_kvs_response(dyad_kvs_response_t *resp)
-{                                         
-    if (resp == NULL)                     
-    {                                     
-        return 0;                         
-    }                                     
-    free(resp->fpath);                    
+{
+    if (resp == NULL)
+    {
+        return 0;
+    }
+    free(resp->fpath);
     free(resp);
     resp = NULL;
     return 0;
@@ -476,6 +488,9 @@ int dyad_finalize(dyad_ctx_t *ctx)
 }
 
 #if DYAD_SYNC_DIR
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int dyad_sync_directory(dyad_ctx_t *ctx, const char *path)
 { // Flush new directory entry https://lwn.net/Articles/457671/
     char path_copy [PATH_MAX+1] = {'\0'};

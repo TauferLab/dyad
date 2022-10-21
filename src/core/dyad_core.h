@@ -115,6 +115,9 @@ int dyad_init(bool debug, bool check, bool shared_storage,
  *
  * @return An integer error code (values TBD)
  */
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int dyad_produce(dyad_ctx_t *ctx, const char *fname);
 
 /**
@@ -125,6 +128,9 @@ int dyad_produce(dyad_ctx_t *ctx, const char *fname);
  *
  * @return An integer error code (values TBD)
  */
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int dyad_consume(dyad_ctx_t *ctx, const char *fname);
 
 /**
@@ -134,6 +140,9 @@ int dyad_consume(dyad_ctx_t *ctx, const char *fname);
  *
  * @return An integer error code (values TBD)
  */
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int dyad_commit(dyad_ctx_t *ctx, const char *fname);
 
 /**
@@ -144,6 +153,9 @@ int dyad_commit(dyad_ctx_t *ctx, const char *fname);
  *
  * @return An integer error code (values TBD)
  */
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int dyad_fetch(dyad_ctx_t *ctx, const char* fname, 
         dyad_kvs_response_t **resp);
                                            
@@ -156,6 +168,9 @@ int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
  *                                   
  * @return An integer error code (values TBD)
  */                                  
+#if DYAD_PERFFLOW
+__attribute__((annotate("@critical_path()")))
+#endif
 int dyad_pull(dyad_ctx_t *ctx, const char* fname,
         dyad_kvs_response_t *kvs_data);    
                                            
