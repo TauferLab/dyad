@@ -2,6 +2,7 @@
 
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 FILE *fopen_real(const char *path, const char *mode)
 {
