@@ -6,7 +6,7 @@
  * For details, see https://github.com/flux-framework.
  *
  * SPDX-License-Identifier: LGPL-3.0
-\************************************************************/
+ \************************************************************/
 
 #if defined(__cplusplus)
 #include <cstdio>
@@ -35,7 +35,7 @@
 
 #define TIME_DIFF(Tstart, Tend ) \
     ((double) (1000000000L * ((Tend).tv_sec  - (Tstart).tv_sec) + \
-                              (Tend).tv_nsec - (Tstart).tv_nsec) / 1000000000L)
+        (Tend).tv_nsec - (Tstart).tv_nsec) / 1000000000L)
 
 #if !defined(DYAD_LOGGING_ON) || (DYAD_LOGGING_ON == 0)
 #define FLUX_LOG_INFO(...) do {} while (0)
@@ -125,23 +125,23 @@ static dyad_mod_ctx_t *getctx (flux_t *h)
     goto done;
 
 error:;
-    return NULL;
+      return NULL;
 
 done:
-    return ctx;
+      return ctx;
 }
 
 #if DYAD_PERFFLOW
 __attribute__((annotate("@critical_path()")))
 #endif
 static int dyad_establish_ucx_connection (dyad_mod_ctx_t *ctx, ucp_address_t *cons_addr,
-                                          ucp_tag_t tag, ucp_ep_h *ep)
+        ucp_tag_t tag, ucp_ep_h *ep)
 {
     ucp_ep_params_t ep_params;
     ep_params.field_mask = UCP_EP_PARAM_FIELD_REMOTE_ADDRESS |
-                           UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE |
-                           UCP_EP_PARAM_FIELD_ERR_HANDLER |
-                           UCP_EP_PARAM_FIELD_USER_DATA;
+        UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE |
+        UCP_EP_PARAM_FIELD_ERR_HANDLER |
+        UCP_EP_PARAM_FIELD_USER_DATA;
     ep_params.address = cons_addr;
     ep_params.err_mode = UCP_ERR_HANDLING_MODE_NONE; // Currently disabling UCX error reporting,
                                                      // but can enable later if desired
@@ -168,7 +168,7 @@ static int dyad_send_data (dyad_mod_ctx_t *ctx, void *buf, ssize_t buflen)
 __attribute__((annotate("@critical_path()")))
 #endif
 static void dyad_fetch_request_cb (flux_t *h, flux_msg_handler_t *w,
-                                   const flux_msg_t *msg, void *arg)
+        const flux_msg_t *msg, void *arg)
 {
     dyad_mod_ctx_t *ctx = getctx (h);
     ssize_t inlen = 0;
@@ -192,13 +192,13 @@ static void dyad_fetch_request_cb (flux_t *h, flux_msg_handler_t *w,
     strncpy (fullpath, ctx->dyad_path, PATH_MAX-1);
     concat_str (fullpath, upath, "/", PATH_MAX);
 
-  #if DYAD_SPIN_WAIT
+#if DYAD_SPIN_WAIT
     if (!get_stat (fullpath, 1000U, 1000L)) {
         FLUX_LOG_ERR (h, "DYAD_MOD: Failed to access info on \"%s\".\n", \
-                          fullpath);
+                fullpath);
         //goto error;
     }
-  #endif // DYAD_SPIN_WAIT
+#endif // DYAD_SPIN_WAIT
 
     fd = open (fullpath, O_RDONLY);
     if (fd < 0) {
@@ -263,9 +263,9 @@ int mod_main (flux_t *h, int argc, char **argv)
     // Parse command-line arguments
     if (argc != 1) {
         FLUX_LOG_ERR (ctx->h, "DYAD_MOD: Missing argument. " \
-                              "Requires a local dyad path specified.\n");
-       fprintf  (stderr,
-                  "Missing argument. Requires a local dyad path specified.\n");
+                "Requires a local dyad path specified.\n");
+        fprintf  (stderr,
+                "Missing argument. Requires a local dyad path specified.\n");
         goto error;
     }
     (ctx->dyad_path) = argv[0]; // First (and only) argument is the managed path
@@ -283,7 +283,7 @@ int mod_main (flux_t *h, int argc, char **argv)
     ucs_status_t status; // variable to store the return codes/statuses of
                          // UCP functions
 
-    // Load UCP config
+                         // Load UCP config
     status = ucp_config_read (NULL, NULL, &config);
     // If config loading failed, raise an error
     if (status != UCS_OK)
@@ -297,15 +297,15 @@ int mod_main (flux_t *h, int argc, char **argv)
     //   * "request_size" (UCP_PARAM_FIELD_REQUEST_SIZE)
     //   * "request_init" (UCP_PARAM_FIELD_REQUEST_INIT)
     ucx_params.field_mask = UCP_PARAMS_FIELD_FEATURES |
-                            UCP_PARAM_FIELD_REQUEST_SIZE |
-                            UCP_PARAM_FIELD_REQUEST_INIT;
+        UCP_PARAM_FIELD_REQUEST_SIZE |
+        UCP_PARAM_FIELD_REQUEST_INIT;
     // Enable the following UCP features
     //   * Tag Matching Send/Recv
     //   * RMA (in case it's needed for Rendezvous protocol)
     //   * Wakeup (enables efficient blocking for async communication)
     ucx_params.features = UCP_FEATURE_TAG |
-                          UCP_FEATURE_RMA |
-                          UCP_FEATURE_WAKEUP;
+        UCP_FEATURE_RMA |
+        UCP_FEATURE_WAKEUP;
     // Define the size of the request objects returned by async UCP
     // communication routines
     ucx_params.request_size = sizeof(struct ucx_request);
@@ -318,11 +318,11 @@ int mod_main (flux_t *h, int argc, char **argv)
     if (ctx->debug)
     {
         ucp_config_print(
-            config,
-            stderr,
-            "UCX Configuration",
-            UCS_CONFIG_PRINT_CONFIG
-        );
+                config,
+                stderr,
+                "UCX Configuration",
+                UCS_CONFIG_PRINT_CONFIG
+                );
     }
     // Config is no longer needed, so release it
     ucp_config_release(config);
@@ -352,13 +352,13 @@ int mod_main (flux_t *h, int argc, char **argv)
     ucp_worker_attr_t worker_attrs; // UCP Worker attributes
                                     // Stores the address and address length
                                     // after calling ucp_worker_query
-    // Query the UCP Worker for it's address
+                                    // Query the UCP Worker for it's address
     worker_attrs.field_mask = UCP_WORKER_ATTR_FIELD_ADDRESS;
     // Get the address of the UCP worker
     status = ucp_worker_query(
-        ctx->ucx_worker,
-        &worker_attrs
-    );
+            ctx->ucx_worker,
+            &worker_attrs
+            );
     // If getting the Worker address failed, raise an error
     if (status != UCS_OK)
     {
@@ -415,9 +415,9 @@ int mod_main (flux_t *h, int argc, char **argv)
     }
 
     flux_future_t *f = NULL; // Future produced when committing the transaction
-    // Get the KVS namespace from the same environment variable that the
-    // Producers/Consumers use
-    // TODO try to find another way to pass this
+                             // Get the KVS namespace from the same environment variable that the
+                             // Producers/Consumers use
+                             // TODO try to find another way to pass this
     char *kvs_namespace = NULL;
     // If getenv fails, log an error and exit
     if (!(kvs_namespace = getenv ("FLUX_KVS_NAMESPACE")))
@@ -450,7 +450,7 @@ int mod_main (flux_t *h, int argc, char **argv)
     FLUX_LOG_INFO (ctx->h, "dyad module begins using \"%s\"\n", argv[0]);
 
     if (flux_msg_handler_addvec (ctx->h, htab, (void *)h,
-                                 &ctx->handlers) < 0) {
+                &ctx->handlers) < 0) {
         FLUX_LOG_ERR (ctx->h, "flux_msg_handler_addvec: %s\n", strerror (errno));
         goto error;
     }
@@ -462,16 +462,16 @@ int mod_main (flux_t *h, int argc, char **argv)
 
     goto done;
 
-// If an error occurs, set the return value to indicate an error
-// and goto the cleanup step
+    // If an error occurs, set the return value to indicate an error
+    // and goto the cleanup step
 error:;
     final_retval = EXIT_FAILURE;
     goto cleanup;
 
-// If no error occurs, set the return value to indicate success
-// and goto the cleanup step
+    // If no error occurs, set the return value to indicate success
+    // and goto the cleanup step
 done:;
-    final_retval = EXIT_SUCCESS;
+     final_retval = EXIT_SUCCESS;
 
 cleanup:;
     // Free the KVS key if not already done

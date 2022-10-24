@@ -4,6 +4,7 @@
 // Includes <flux/core.h>
 #include "dyad_flux_log.h"
 #include "dyad_err.h"
+#include "dyad_dtl_defs.h"
 
 #ifdef __cplusplus
 #include <cstdlib>
@@ -36,6 +37,7 @@ extern "C"
  */
 struct dyad_ctx {
     flux_t *h; // the Flux handle for DYAD
+    dyad_dtl_t *dtl_handle; // Opaque handle to DTL info
     bool debug; // if true, perform debug logging
     bool check; // if true, perform some check logging
     bool reenter; // if false, do not recursively enter DYAD
@@ -96,7 +98,8 @@ typedef struct dyad_kvs_response dyad_kvs_response_t;
 int dyad_init(bool debug, bool check, bool shared_storage,
         unsigned int key_depth, unsigned int key_bins,
         const char *kvs_namespace, const char* prod_managed_path,
-        const char *cons_managed_path, bool intercept, dyad_ctx_t **ctx);
+        const char *cons_managed_path, bool intercept,
+        dyad_dtl_mode dtl_mode, dyad_ctx_t **ctx);
 
 /**
  * @brief Wrapper function that performs all the common tasks needed
