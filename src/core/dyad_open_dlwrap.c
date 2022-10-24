@@ -1,11 +1,10 @@
 #include "dyad_open_dlwrap.h"
 
-#include <dflcn.h>
 #include <dlfcn.h>
 #include <fcntl.h>
 
 FILE *fopen_real(const char *path, const char *mode)
-{                                    
+{
     typedef FILE *(*fopen_real_ptr_t) (const char *, const char *);
     fopen_real_ptr_t func_ptr = (fopen_real_ptr_t) dlsym (RTLD_NEXT, "fopen");
     char *error = NULL;
@@ -14,23 +13,23 @@ FILE *fopen_real(const char *path, const char *mode)
         return NULL;
     }
 
-    return (func_ptr (path, mode));        
-}                                          
-                                           
+    return (func_ptr (path, mode));
+}
+
 FILE *dyad_fopen(dyad_ctx_t *ctx, const char *path, const char *mode)
-{                                          
-    if (ctx->intercept)                    
-    {                                      
+{
+    if (ctx->intercept)
+    {
         FILE* fobj = fopen_real(path, mode);
         if (fobj == NULL)
         {
-            // TODO log error        
-        }                            
-        return fobj;                 
-    }                                
-    return fopen(path, mode);        
-}                                    
-                                     
+            // TODO log error
+        }
+        return fobj;
+    }
+    return fopen(path, mode);
+}
+
 int open_real (const char *path, int oflag, ...)
 {
     typedef int (*open_real_ptr_t) (const char *, int, mode_t, ...);
@@ -76,13 +75,13 @@ int dyad_open(dyad_ctx_t *ctx, const char *path, int oflag, ...)
     return open(path, oflag, mode);
 }
 
-int fclose_real(FILE *fp)                 
-{                                         
+int fclose_real(FILE *fp)
+{
     typedef int (*fclose_real_ptr_t) (FILE *);
     fclose_real_ptr_t func_ptr = (fclose_real_ptr_t) dlsym (RTLD_NEXT, "fclose");
-    char *error = NULL;                   
-                                          
-    if ((error = dlerror ())) {           
+    char *error = NULL;
+
+    if ((error = dlerror ())) {
         return EOF; // return the failure code
     }
 
