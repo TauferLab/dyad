@@ -118,33 +118,33 @@ void dyad_sync_init (void)
         prod_managed_path = NULL;
     }
 
-    int rc = dyad_init(debug, check, shared_storage, key_depth, 
+    int rc = dyad_init(debug, check, shared_storage, key_depth,
             key_bins, kvs_namespace, prod_managed_path,
             cons_managed_path, intercept, &ctx);
 
     if (DYAD_IS_ERROR(rc))
     {
-        FLUX_LOG_ERR("Could not initialize DYAD!\n");
+        FLUX_LOG_ERR(ctx, "Could not initialize DYAD!\n");
         ctx = NULL;
         return;
     }
 
-    FLUX_LOG_INFO ("DYAD Initialized\n");
-    FLUX_LOG_INFO ("DYAD_SYNC_DEBUG=%s\n", (ctx->debug)? "true": "false");
-    FLUX_LOG_INFO ("DYAD_SYNC_CHECK=%s\n", (ctx->check)? "true": "false");
-    FLUX_LOG_INFO ("DYAD_KEY_DEPTH=%u\n", ctx->key_depth);
-    FLUX_LOG_INFO ("DYAD_KEY_BINS=%u\n", ctx->key_bins);
+    FLUX_LOG_INFO (ctx, "DYAD Initialized\n");
+    FLUX_LOG_INFO (ctx, "DYAD_SYNC_DEBUG=%s\n", (ctx->debug)? "true": "false");
+    FLUX_LOG_INFO (ctx, "DYAD_SYNC_CHECK=%s\n", (ctx->check)? "true": "false");
+    FLUX_LOG_INFO (ctx, "DYAD_KEY_DEPTH=%u\n", ctx->key_depth);
+    FLUX_LOG_INFO (ctx, "DYAD_KEY_BINS=%u\n", ctx->key_bins);
 
   #if DYAD_SYNC_START
     ctx->sync_started = false;
     if ((e = getenv ("DYAD_SYNC_START")) && (atoi (e) > 0)) {
-        FLUX_LOG_INFO ("Before barrier %u\n", ctx->rank);
+        FLUX_LOG_INFO (ctx, "Before barrier %u\n", ctx->rank);
         flux_future_t *fb;
         if (!(fb = flux_barrier (ctx->h, "sync_start", atoi (e))))
-            FLUX_LOG_ERR ("flux_barrier failed for %d ranks\n", atoi (e));
+            FLUX_LOG_ERR (ctx, "flux_barrier failed for %d ranks\n", atoi (e));
         if (flux_future_get (fb, NULL) < 0)
-            FLUX_LOG_ERR ("flux_future_get for barrir failed\n");
-        FLUX_LOG_INFO ("After barrier %u\n", ctx->rank);
+            FLUX_LOG_ERR (ctx, "flux_future_get for barrir failed\n");
+        FLUX_LOG_INFO (ctx, "After barrier %u\n", ctx->rank);
         flux_future_destroy (fb);
 
         ctx->sync_started = true;
@@ -240,7 +240,7 @@ FILE *fopen (const char *path, const char *mode)
         // TODO: make sure if the directory mode is consistent
         goto real_call;
     }
-    
+
     if (!mode_is_read(mode))
     {
         goto real_call;

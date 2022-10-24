@@ -22,13 +22,13 @@
 #include <cstdlib>
 #include <climits>
 #include <cstring>
-#include <cerrno>                    
-#include <cstdarg>                   
-#include <ctime>                     
+#include <cerrno>
+#include <cstdarg>
+#include <ctime>
 using namespace std; // std::clock ()
-//#include <cstdbool> // c++11       
-                                     
-#include <fcntl.h>                   
+//#include <cstdbool> // c++11
+
+#include <fcntl.h>
 #include <libgen.h> // dirname
 #include <dlfcn.h>
 #include <unistd.h>
@@ -110,7 +110,7 @@ void dyad_stream_core::init ()
     {
         kvs_namespace = e;
     }
-    else 
+    else
     {
         kvs_namespace = NULL;
     }
@@ -119,7 +119,7 @@ void dyad_stream_core::init ()
     {
         cons_managed_path = e;
     }
-    else 
+    else
     {
         cons_managed_path = NULL;
     }
@@ -127,13 +127,13 @@ void dyad_stream_core::init ()
     {
         prod_managed_path = e;
     }
-    else 
+    else
     {
         prod_managed_path = NULL;
     }
 
     int rc = dyad_init(debug, check, shared_storage, key_depth,
-            key_bins, kvs_namespace, prod_managed_path, 
+            key_bins, kvs_namespace, prod_managed_path,
             cons_managed_path, intercept, &m_ctx);
 
     // TODO figure out if we want to error if init fails
@@ -216,13 +216,13 @@ bool dyad_stream_core::close_sync (const char *path)
 
     int rc = 0;
 
-    if (! is_dyad_producer ()) {     
-        return true;                 
-    }                                
-                                     
-    rc = dyad_produce(m_ctx, path);  
-                                     
-    if (DYAD_IS_ERROR(rc)) {                    
+    if (! is_dyad_producer ()) {
+        return true;
+    }
+
+    rc = dyad_produce(m_ctx, path);
+
+    if (DYAD_IS_ERROR(rc)) {
         DPRINTF (m_ctx, "DYAD_SYNC CLOSE: failed sync (\"%s\").\n", path);
         return false;
     }
