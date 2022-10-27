@@ -5,6 +5,7 @@
 #include "dyad_flux_log.h"
 #include "dyad_err.h"
 #include "dyad_dtl_defs.h"
+#include "dyad_flux_log.h"
 
 #ifdef __cplusplus
 #include <cstdlib>
@@ -98,8 +99,7 @@ typedef struct dyad_kvs_response dyad_kvs_response_t;
 int dyad_init(bool debug, bool check, bool shared_storage,
         unsigned int key_depth, unsigned int key_bins,
         const char *kvs_namespace, const char* prod_managed_path,
-        const char *cons_managed_path, bool intercept,
-        dyad_dtl_mode dtl_mode, dyad_ctx_t **ctx);
+        const char *cons_managed_path, bool intercept, dyad_ctx_t **ctx);
 
 /**
  * @brief Wrapper function that performs all the common tasks needed
