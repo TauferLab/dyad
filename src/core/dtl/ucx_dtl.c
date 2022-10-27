@@ -345,7 +345,7 @@ int dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle)
     return DYAD_OK;
 }
 
-int dyad_dtl_ucx_finalize(dyad_dtl_t *dtl_handle)
+int dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
 {
     if (dtl_handle != NULL)
     {

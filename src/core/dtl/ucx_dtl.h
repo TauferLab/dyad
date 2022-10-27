@@ -38,6 +38,6 @@ int dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
 
 int dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle);
 
-int dyad_dtl_ucx_finalize(dyad_dtl_t *dtl_handle);
+int dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle);
 
 #endif /* __UCX_DTL_H__ */
