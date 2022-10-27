@@ -1,6 +1,7 @@
 #include "dyad_dtl.h"
 
 #include "ucx_dtl.h"
+#include "flux_dtl.h"
 
 int dyad_dtl_init(flux_t *h, const char *kvs_namespace,
         bool debug, dyad_dtl_t **dtl_handle)
@@ -12,7 +13,14 @@ int dyad_dtl_init(flux_t *h, const char *kvs_namespace,
         debug,
         (dyad_dtl_ucx_t**) dtl_handle
     );
-#endif /* DYAD_DTL_UCX_ENABLE */
+#else
+    return dyad_dtl_flux_init(
+        h,
+        kvs_namespace,
+        debug,
+        (dyad_dtl_flux_t**) dtl_handle
+    );
+#endif
 }
 
 int dyad_dtl_establish_connection(dyad_dtl_t *dtl_handle,
@@ -23,7 +31,12 @@ int dyad_dtl_establish_connection(dyad_dtl_t *dtl_handle,
         (dyad_dtl_ucx_t*) dtl_handle,
         producer_rank
     );
-#endif /* DYAD_DTL_UCX_ENABLE */
+#else
+    return dyad_dtl_flux_establish_connection(
+        (dyad_dtl_flux_t*) dtl_handle,
+        producer_rank
+    );
+#endif
 }
 
 int dyad_dtl_rpc_pack(dyad_dtl_t *dtl_handle, const char *upath,
@@ -35,7 +48,13 @@ int dyad_dtl_rpc_pack(dyad_dtl_t *dtl_handle, const char *upath,
         upath,
         packed_obj
     );
-#endif /* DYAD_DTL_UCX_ENABLE */
+#else
+    return dyad_dtl_flux_rpc_pack(
+        (dyad_dtl_flux_t*) dtl_handle,
+        upath,
+        packed_obj
+    );
+#endif
 }
 
 int dyad_dtl_recv(dyad_dtl_t *dtl_handle, flux_future_t *f,
@@ -48,23 +67,38 @@ int dyad_dtl_recv(dyad_dtl_t *dtl_handle, flux_future_t *f,
         buf,
         buflen
     );
-#endif /* DYAD_DTL_UCX_ENABLE */
+#else
+    return dyad_dtl_flux_recv(
+        (dyad_dtl_flux_t*) dtl_handle,
+        f,
+        buf,
+        buflen
+    );
+#endif
 }
 
 int dyad_dtl_close_connection(dyad_dtl_t *dtl_handle)
 {
 #if DYAD_DTL_UCX_ENABLE
     return dyad_dtl_ucx_close_connection(
-        (dyad_dtl_ucx_t*) dtl_handle,
+        (dyad_dtl_ucx_t*) dtl_handle
     );
-#endif /* DYAD_DTL_UCX_ENABLE */
+#else
+    return dyad_dtl_flux_close_connection(
+        (dyad_dtl_flux_t*) dtl_handle
+    );
+#endif
 }
 
 int dyad_dtl_finalize(dyad_dtl_t *dtl_handle)
 {
 #if DYAD_DTL_UCX_ENABLE
     return dyad_dtl_ucx_finalize(
-        (dyad_dtl_ucx_t*) dtl_handle,
+        (dyad_dtl_ucx_t*) dtl_handle
     );
-#endif /* DYAD_DTL_UCX_ENABLE */
+#else
+    return dyad_dtl_flux_finalize(
+        (dyad_dtl_flux_t*) dtl_handle
+    );
+#endif
 }
