@@ -1,5 +1,7 @@
 #include "ucx_dtl.h"
 
+#include "dyad_err.h"
+
 #ifdef __cplusplus
 #include <cstdlib>
 #include <cstdint>
@@ -79,7 +81,7 @@ static ucs_status_t dyad_ucx_request_wait(dyad_dtl_ucx_t *dtl_handle, dyad_ucx_r
     return UCS_OK;
 }
 
-int dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
+dyad_dtl_err_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
         bool debug, dyad_dtl_ucx_t **dtl_handle)
 {
     int retval;
@@ -195,10 +197,10 @@ error:;
     return DYAD_UCXINIT_FAIL;
 
 done:;
-    return DYAD_OK;
+    return DYAD_DTL_OK;
 }
 
-int dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
+dyad_dtl_err_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
         uint32_t producer_rank)
 {
     // Because we're using tag-matching send/recv for communication,
@@ -215,10 +217,10 @@ int dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
     // 32-bit rank of the producer followed by the 32-bit rank
     // of the consumer
     dtl_handle->comm_tag = (producer_rank << 32) | consumer_rank;
-    return DYAD_OK;
+    return DYAD_DTL_OK;
 }
 
-int dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
+dyad_dtl_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
         json_t **packed_obj)
 {
     // Use Jansson to pack the tag and UCX address into
@@ -238,10 +240,10 @@ int dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
         FLUX_LOG_ERR (dtl_handle->h, "Could not pack upath and UCX address for RPC\n");
         return -1;
     }
-    return DYAD_OK;
+    return DYAD_DTL_OK;
 }
 
-int dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
+dyad_dtl_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
         void **buf, size_t *buflen)
 {
     ucs_status_t status;
@@ -334,7 +336,7 @@ int dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
     return UCS_OK;
 }
 
-int dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle)
+dyad_dtl_err_t dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle)
 {
     // Since we're using tag send/recv, there's no need
     // to explicitly close the connection. So, all we're
@@ -342,10 +344,10 @@ int dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle)
     // be valid for DYAD because DYAD won't send a file from
     // one node to the same node).
     dtl_handle->comm_tag = 0;
-    return DYAD_OK;
+    return DYAD_DTL_OK;
 }
 
-int dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
+dyad_dtl_err_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
 {
     if (dtl_handle != NULL)
     {
@@ -377,5 +379,5 @@ int dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
         free(dtl_handle);
         dtl_handle = NULL;
     }
-    return DYAD_OK;
+    return DYAD_DTL_OK;
 }
