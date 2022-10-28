@@ -1,6 +1,6 @@
 #include "flux_dtl.h"
 
-dyad_dtl_err_t dyad_dtl_flux_init(flux_t *h, const char *kvs_namespace,
+dyad_core_err_t dyad_dtl_flux_init(flux_t *h, const char *kvs_namespace,
         bool debug, dyad_dtl_flux_t **dtl_handle)
 {
     *dtl_handle = malloc(sizeof(struct dyad_dtl_flux));
@@ -14,13 +14,13 @@ dyad_dtl_err_t dyad_dtl_flux_init(flux_t *h, const char *kvs_namespace,
     return DYAD_DTL_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_flux_establish_connection(dyad_dtl_flux_t *dtl_handle,
+dyad_core_err_t dyad_dtl_flux_establish_connection(dyad_dtl_flux_t *dtl_handle,
         uint32_t producer_rank)
 {
     return DYAD_DTL_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_flux_rpc_pack(dyad_dtl_flux_t *dtl_handle, const char *upath,
+dyad_core_err_t dyad_dtl_flux_rpc_pack(dyad_dtl_flux_t *dtl_handle, const char *upath,
         json_t **packed_obj)
 {
     *packed_obj = json_pack(
@@ -36,7 +36,7 @@ dyad_dtl_err_t dyad_dtl_flux_rpc_pack(dyad_dtl_flux_t *dtl_handle, const char *u
     return DYAD_DTL_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_flux_recv(dyad_dtl_flux_t *dtl_handle, flux_future_t *f,
+dyad_core_err_t dyad_dtl_flux_recv(dyad_dtl_flux_t *dtl_handle, flux_future_t *f,
         void **buf, size_t *buflen)
 {
     int rc = flux_rpc_get_raw(f, (const void**) buf, buflen);
@@ -53,12 +53,12 @@ dyad_dtl_err_t dyad_dtl_flux_recv(dyad_dtl_flux_t *dtl_handle, flux_future_t *f,
     return DYAD_DTL_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_flux_close_connection(dyad_dtl_flux_t *dtl_handle)
+dyad_core_err_t dyad_dtl_flux_close_connection(dyad_dtl_flux_t *dtl_handle)
 {
     return DYAD_DTL_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_flux_finalize(dyad_dtl_flux_t *dtl_handle)
+dyad_core_err_t dyad_dtl_flux_finalize(dyad_dtl_flux_t *dtl_handle)
 {
     if (dtl_handle != NULL)
     {

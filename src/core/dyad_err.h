@@ -17,13 +17,6 @@ enum dyad_core_err_codes {
 
 typedef enum dyad_core_err_codes dyad_core_err_t;
 
-enum dyad_dtl_err_codes {
-    DYAD_DTL_OK = 0, // DTL Operation successful
-};
-
-typedef enum dyad_dtl_err_codes dyad_dtl_err_t;
-
-#define DYAD_IS_ERROR(code) (code < 0)
-#define DYAD_DTL_IS_ERROR(code) (code < 0)
+#define DYAD_IS_ERROR(code) (code != DYAD_OK)
 
 #endif

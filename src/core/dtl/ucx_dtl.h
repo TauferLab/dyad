@@ -25,21 +25,21 @@ struct dyad_dtl_ucx {
 
 typedef struct dyad_dtl_ucx dyad_dtl_ucx_t;
 
-dyad_dtl_err_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
+dyad_core_err_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
         bool debug, dyad_dtl_ucx_t **dtl_handle);
 
-dyad_dtl_err_t dyad_dtl_ucx_establish_connection(
+dyad_core_err_t dyad_dtl_ucx_establish_connection(
         dyad_dtl_ucx_t *dtl_handle, uint32_t producer_rank);
 
-dyad_dtl_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle,
+dyad_core_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle,
         const char *upath, json_t **packed_obj);
 
-dyad_dtl_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
+dyad_core_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
         flux_future_t *f, void **buf, size_t *buflen);
 
-dyad_dtl_err_t dyad_dtl_ucx_close_connection(
+dyad_core_err_t dyad_dtl_ucx_close_connection(
         dyad_dtl_ucx_t *dtl_handle);
 
-dyad_dtl_err_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle);
+dyad_core_err_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle);
 
 #endif /* __UCX_DTL_H__ */

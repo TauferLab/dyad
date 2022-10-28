@@ -81,7 +81,7 @@ static ucs_status_t dyad_ucx_request_wait(dyad_dtl_ucx_t *dtl_handle, dyad_ucx_r
     return UCS_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
+dyad_core_err_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
         bool debug, dyad_dtl_ucx_t **dtl_handle)
 {
     int retval;
@@ -200,7 +200,7 @@ done:;
     return DYAD_DTL_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
+dyad_core_err_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
         uint32_t producer_rank)
 {
     // Because we're using tag-matching send/recv for communication,
@@ -220,7 +220,7 @@ dyad_dtl_err_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
     return DYAD_DTL_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
+dyad_core_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
         json_t **packed_obj)
 {
     // Use Jansson to pack the tag and UCX address into
@@ -243,7 +243,7 @@ dyad_dtl_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upa
     return DYAD_DTL_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
+dyad_core_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
         void **buf, size_t *buflen)
 {
     ucs_status_t status;
@@ -336,7 +336,7 @@ dyad_dtl_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
     return UCS_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle)
+dyad_core_err_t dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle)
 {
     // Since we're using tag send/recv, there's no need
     // to explicitly close the connection. So, all we're
@@ -347,7 +347,7 @@ dyad_dtl_err_t dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle)
     return DYAD_DTL_OK;
 }
 
-dyad_dtl_err_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
+dyad_core_err_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
 {
     if (dtl_handle != NULL)
     {
