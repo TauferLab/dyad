@@ -197,7 +197,7 @@ error:;
     return DYAD_UCXINIT_FAIL;
 
 done:;
-    return DYAD_DTL_OK;
+    return DYAD_OK;
 }
 
 dyad_core_err_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
@@ -211,13 +211,13 @@ dyad_core_err_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
     if (flux_get_rank(dtl_handle->h, &consumer_rank) < 0)
     {
         FLUX_LOG_ERR (dtl_handle->h, "Cannot get consumer rank\n");
-        return -1;
+        return DYAD_FLUXFAIL;
     }
     // The tag is a 64 bit unsigned integer consisting of the
     // 32-bit rank of the producer followed by the 32-bit rank
     // of the consumer
     dtl_handle->comm_tag = (producer_rank << 32) | consumer_rank;
-    return DYAD_DTL_OK;
+    return DYAD_OK;
 }
 
 dyad_core_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
@@ -238,9 +238,9 @@ dyad_core_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *up
     if (*packed_obj == NULL)
     {
         FLUX_LOG_ERR (dtl_handle->h, "Could not pack upath and UCX address for RPC\n");
-        return -1;
+        return DYAD_BADPACK;
     }
-    return DYAD_DTL_OK;
+    return DYAD_OK;
 }
 
 dyad_core_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
@@ -285,7 +285,7 @@ dyad_core_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
         if (UCX_STATUS_FAIL(status))
         {
             FLUX_LOG_ERR (dtl_handle->h, "Could not wait on the message from the producer plugin\n");
-            return -1;
+            return DYAD_UCXWAIT_FAIL;
         }
     }
     // The metadata retrived from the probed tag recv event contains
@@ -297,7 +297,7 @@ dyad_core_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
     if (*buf == NULL)
     {
         FLUX_LOG_ERR (dtl_handle->h, "Could not allocate memory for file\n");
-        return -1;
+        return DYAD_SYSFAIL;
     }
     // Define the settings for the recv operation
     //
@@ -331,9 +331,9 @@ dyad_core_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
         FLUX_LOG_ERR (dtl_handle->h, "UCX recv failed!\n");
         free(*buf);
         *buf = NULL;
-        return -1;
+        return DYAD_UCXCOMM_FAIL;
     }
-    return UCS_OK;
+    return DYAD_OK;
 }
 
 dyad_core_err_t dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle)
@@ -344,7 +344,7 @@ dyad_core_err_t dyad_dtl_ucx_close_connection(dyad_dtl_ucx_t *dtl_handle)
     // be valid for DYAD because DYAD won't send a file from
     // one node to the same node).
     dtl_handle->comm_tag = 0;
-    return DYAD_DTL_OK;
+    return DYAD_OK;
 }
 
 dyad_core_err_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
@@ -379,5 +379,5 @@ dyad_core_err_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
         free(dtl_handle);
         dtl_handle = NULL;
     }
-    return DYAD_DTL_OK;
+    return DYAD_OK;
 }
