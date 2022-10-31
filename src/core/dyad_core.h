@@ -1,8 +1,8 @@
 #ifndef __DYAD_CORE_CLIENT_H__
 #define __DYAD_CORE_CLIENT_H__
 
-#include <flux/core.h>
-
+// Includes <flux/core.h>
+#include "dyad_flux_log.h"
 #include "dyad_err.h"
 
 #ifdef __cplusplus
@@ -44,16 +44,6 @@
 #else
 #define IPRINTF(curr_dyad_ctx, fmt,...)
 #endif // DYAD_FULL_DEBUG
-
-#if !defined(DYAD_LOGGING_ON) || (DYAD_LOGGING_ON == 0)
-#define FLUX_LOG_INFO(curr_dyad_ctx, ...) do {} while (0)
-#define FLUX_LOG_ERR(curr_dyad_ctx, ...) do {} while (0)
-#else
-#define FLUX_LOG_INFO(curr_dyad_ctx, ...) flux_log (\
-    curr_dyad_ctx->h, LOG_INFO, __VA_ARGS__)
-#define FLUX_LOG_ERR(curr_dyad_ctx, ...) flux_log_error (\
-    curr_dyad_ctx->h, __VA_ARGS__)
-#endif
 
 #ifdef __cplusplus
 extern "C"

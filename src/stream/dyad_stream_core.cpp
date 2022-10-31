@@ -155,14 +155,14 @@ void dyad_stream_core::init (const dyad_params& p)
 
 void dyad_stream_core::log_info (const std::string& msg_head) const
 {
-    FLUX_LOG_INFO (m_ctx, "=== %s ===\n", msg_head.c_str ());
-    FLUX_LOG_INFO (m_ctx, "%s=%s\n", DYAD_PATH_CONS_ENV, m_ctx->cons_managed_path);
-    FLUX_LOG_INFO (m_ctx, "%s=%s\n", DYAD_PATH_PROD_ENV, m_ctx->prod_managed_path);
-    FLUX_LOG_INFO (m_ctx, "DYAD_SYNC_DEBUG=%s\n", (m_ctx->debug)? "true": "false");
-    FLUX_LOG_INFO (m_ctx, "DYAD_SHARED_STORAGE=%s\n", (m_ctx->shared_storage)? "true": "false");
-    FLUX_LOG_INFO (m_ctx, "DYAD_KEY_DEPTH=%u\n", m_ctx->key_depth);
-    FLUX_LOG_INFO (m_ctx, "DYAD_KEY_BINS=%u\n", m_ctx->key_bins);
-    FLUX_LOG_INFO (m_ctx, "FLUX_KVS_NAMESPACE=%s\n", m_ctx->kvs_namespace);
+    DYAD_LOG_INFO (m_ctx, "=== %s ===\n", msg_head.c_str ());
+    DYAD_LOG_INFO (m_ctx, "%s=%s\n", DYAD_PATH_CONS_ENV, m_ctx->cons_managed_path);
+    DYAD_LOG_INFO (m_ctx, "%s=%s\n", DYAD_PATH_PROD_ENV, m_ctx->prod_managed_path);
+    DYAD_LOG_INFO (m_ctx, "DYAD_SYNC_DEBUG=%s\n", (m_ctx->debug)? "true": "false");
+    DYAD_LOG_INFO (m_ctx, "DYAD_SHARED_STORAGE=%s\n", (m_ctx->shared_storage)? "true": "false");
+    DYAD_LOG_INFO (m_ctx, "DYAD_KEY_DEPTH=%u\n", m_ctx->key_depth);
+    DYAD_LOG_INFO (m_ctx, "DYAD_KEY_BINS=%u\n", m_ctx->key_bins);
+    DYAD_LOG_INFO (m_ctx, "FLUX_KVS_NAMESPACE=%s\n", m_ctx->kvs_namespace);
 }
 
 bool dyad_stream_core::is_dyad_producer ()

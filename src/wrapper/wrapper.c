@@ -124,27 +124,27 @@ void dyad_sync_init (void)
 
     if (DYAD_IS_ERROR(rc))
     {
-        FLUX_LOG_ERR(ctx, "Could not initialize DYAD!\n");
+        DYAD_LOG_ERR(ctx, "Could not initialize DYAD!\n");
         ctx = NULL;
         return;
     }
 
-    FLUX_LOG_INFO (ctx, "DYAD Initialized\n");
-    FLUX_LOG_INFO (ctx, "DYAD_SYNC_DEBUG=%s\n", (ctx->debug)? "true": "false");
-    FLUX_LOG_INFO (ctx, "DYAD_SYNC_CHECK=%s\n", (ctx->check)? "true": "false");
-    FLUX_LOG_INFO (ctx, "DYAD_KEY_DEPTH=%u\n", ctx->key_depth);
-    FLUX_LOG_INFO (ctx, "DYAD_KEY_BINS=%u\n", ctx->key_bins);
+    DYAD_LOG_INFO (ctx, "DYAD Initialized\n");
+    DYAD_LOG_INFO (ctx, "DYAD_SYNC_DEBUG=%s\n", (ctx->debug)? "true": "false");
+    DYAD_LOG_INFO (ctx, "DYAD_SYNC_CHECK=%s\n", (ctx->check)? "true": "false");
+    DYAD_LOG_INFO (ctx, "DYAD_KEY_DEPTH=%u\n", ctx->key_depth);
+    DYAD_LOG_INFO (ctx, "DYAD_KEY_BINS=%u\n", ctx->key_bins);
 
   #if DYAD_SYNC_START
     ctx->sync_started = false;
     if ((e = getenv ("DYAD_SYNC_START")) && (atoi (e) > 0)) {
-        FLUX_LOG_INFO (ctx, "Before barrier %u\n", ctx->rank);
+        DYAD_LOG_INFO (ctx, "Before barrier %u\n", ctx->rank);
         flux_future_t *fb;
         if (!(fb = flux_barrier (ctx->h, "sync_start", atoi (e))))
-            FLUX_LOG_ERR (ctx, "flux_barrier failed for %d ranks\n", atoi (e));
+            DYAD_LOG_ERR (ctx, "flux_barrier failed for %d ranks\n", atoi (e));
         if (flux_future_get (fb, NULL) < 0)
-            FLUX_LOG_ERR (ctx, "flux_future_get for barrir failed\n");
-        FLUX_LOG_INFO (ctx, "After barrier %u\n", ctx->rank);
+            DYAD_LOG_ERR (ctx, "flux_future_get for barrir failed\n");
+        DYAD_LOG_INFO (ctx, "After barrier %u\n", ctx->rank);
         flux_future_destroy (fb);
 
         ctx->sync_started = true;
