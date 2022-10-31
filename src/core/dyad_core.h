@@ -26,25 +26,6 @@
 // Now defined in src/utils/utils.h
 //#define DYAD_PATH_DELIM    "/"
 
-// Debug message
-#ifndef DPRINTF
-#define DPRINTF(curr_dyad_ctx, fmt,...) do { \
-    if (curr_dyad_ctx && curr_dyad_ctx->debug) fprintf (stderr, fmt, ##__VA_ARGS__); \
-} while (0)
-#endif // DPRINTF
-
-#define TIME_DIFF(Tstart, Tend ) \
-    ((double) (1000000000L * ((Tend).tv_sec  - (Tstart).tv_sec) + \
-                              (Tend).tv_nsec - (Tstart).tv_nsec) / 1000000000L)
-
-// Detailed information message that can be omitted
-#if DYAD_FULL_DEBUG
-#define IPRINTF DPRINTF
-#define IPRINTF_DEFINED
-#else
-#define IPRINTF(curr_dyad_ctx, fmt,...)
-#endif // DYAD_FULL_DEBUG
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -77,6 +58,26 @@ struct dyad_kvs_response {
     uint32_t owner_rank;
 };
 typedef struct dyad_kvs_response dyad_kvs_response_t;
+
+// Debug message
+#ifndef DPRINTF
+#define DPRINTF(curr_dyad_ctx, fmt,...) do { \
+    if (curr_dyad_ctx && curr_dyad_ctx->debug) fprintf (stderr, fmt, ##__VA_ARGS__); \
+} while (0)
+#endif // DPRINTF
+
+#define TIME_DIFF(Tstart, Tend ) \
+    ((double) (1000000000L * ((Tend).tv_sec  - (Tstart).tv_sec) + \
+                              (Tend).tv_nsec - (Tstart).tv_nsec) / 1000000000L)
+
+// Detailed information message that can be omitted
+#if DYAD_FULL_DEBUG
+#define IPRINTF DPRINTF
+#define IPRINTF_DEFINED
+#else
+#define IPRINTF(curr_dyad_ctx, fmt,...)
+#endif // DYAD_FULL_DEBUG
+
 
 /**
  * @brief Intialize the DYAD context

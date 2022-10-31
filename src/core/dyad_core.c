@@ -70,7 +70,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         if ((*ctx)->initialized)
         {
             // TODO Indicate already initialized
-            DPRINTF (*ctx, "DYAD context already initialized\n");
+            DPRINTF ((*ctx), "DYAD context already initialized\n");
         }
         else
         {
