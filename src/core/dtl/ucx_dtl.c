@@ -333,6 +333,11 @@ dyad_core_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
         *buf = NULL;
         return DYAD_UCXCOMM_FAIL;
     }
+    if (f != NULL)
+    {
+        flux_future_destroy (f);
+        f = NULL;
+    }
     return DYAD_OK;
 }
 
