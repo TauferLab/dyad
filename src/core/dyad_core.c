@@ -1,4 +1,5 @@
 // Also provides dyad_core.h
+#include "dyad_flux_log.h"
 #include "dyad_open_dlwrap.h"
 #include "dyad_err.h"
 #include "utils.h"
@@ -69,6 +70,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         if ((*ctx)->initialized)
         {
             // TODO Indicate already initialized
+            DPRINTF (*ctx, "DYAD context already initialized\n");
         }
         else
         {
@@ -79,7 +81,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     *ctx = (dyad_ctx_t*) malloc(sizeof(dyad_ctx_t));
     if (*ctx == NULL)
     {
-        // TODO Indicate error
+        fprintf (stderr, "Could not allocate DYAD context!\n");
         return DYAD_NOCTX;
     }
     **ctx = dyad_ctx_default;
@@ -92,7 +94,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     (*ctx)->kvs_namespace = (char*) malloc(strlen(kvs_namespace)+1);
     if ((*ctx)->kvs_namespace == NULL)
     {
-        // TODO Indicate error
+        fprintf (stderr, "Could not allocate buffer for KVS namespace!\n");
         free(*ctx);
         *ctx = NULL;
         return DYAD_NOCTX;
@@ -105,7 +107,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     (*ctx)->prod_managed_path = (char*) malloc(strlen(prod_managed_path)+1);
     if ((*ctx)->prod_managed_path == NULL)
     {
-        // TODO Indicate error
+        fprintf (stderr, "Could not allocate buffer for Producer managed path!\n");
         free((*ctx)->kvs_namespace);
         free(*ctx);
         *ctx = NULL;
@@ -119,7 +121,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     (*ctx)->cons_managed_path = (char*) malloc(strlen(cons_managed_path)+1);
     if ((*ctx)->cons_managed_path == NULL)
     {
-        // TODO Indicate error
+        fprintf (stderr, "Could not allocate buffer for Consumer managed path!\n");
         free((*ctx)->kvs_namespace);
         free((*ctx)->prod_managed_path);
         free(*ctx);
@@ -135,12 +137,12 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     (*ctx)->h = flux_open(NULL, 0);
     if ((*ctx)->h == NULL)
     {
-        // TODO Indicate error
+        fprintf (stderr, "Could not open Flux handle!\n");
         return DYAD_FLUXFAIL;
     }
     if (flux_get_rank((*ctx)->h, &((*ctx)->rank)) < 0)
     {
-        // TODO Indicate error
+        FLUX_LOG_ERR ((*ctx)->h, "Could not get Flux rank!\n");
         return DYAD_FLUXFAIL;
     }
     (*ctx)->initialized = true;
@@ -160,7 +162,7 @@ int dyad_consume(dyad_ctx_t *ctx, const char *fname)
     rc = dyad_fetch(ctx, fname, &resp);
     if (rc != 0)
     {
-        // TODO Indicate error
+        DYAD_LOG_ERR (ctx, "dyad_fetch failed!\n");
         if (resp != NULL)
         {
             dyad_free_kvs_response(resp);
@@ -171,7 +173,7 @@ int dyad_consume(dyad_ctx_t *ctx, const char *fname)
     dyad_free_kvs_response(resp);
     if (rc != 0)
     {
-        // TODO Indicate error
+        DYAD_LOG_ERR (ctx, "dyad_free_kvs_response failed!\n");
         return rc;
     };
     return DYAD_OK;
@@ -187,7 +189,7 @@ int dyad_kvs_commit(dyad_ctx_t *ctx, flux_kvs_txn_t *txn,
             0, txn);
     if (*f == NULL)
     {
-        // TODO FLUX_LOG_ERR
+        DYAD_LOG_ERR(ctx, "Could not commit transaction to Flux KVS\n");
         return DYAD_BADCOMMIT;
     }
     flux_future_wait_for(*f, -1.0);
@@ -217,25 +219,25 @@ int publish_via_flux(dyad_ctx_t* ctx, const char *upath)
             );
     if (ctx->h == NULL)
     {
-        // TODO Set correct ret val
+        fprintf (stderr, "No Flux handle found in publish_via_flux!\n");
         return DYAD_NOCTX;
     }
     // TODO FLUX_LOG_INFO
     txn = flux_kvs_txn_create();
     if (txn == NULL)
     {
-        // TODO Log err
+        DYAD_LOG_ERR(ctx, "Could not create Flux KVS transaction\n");
         return DYAD_FLUXFAIL;
     }
     if (flux_kvs_txn_pack(txn, 0, topic, "i", ctx->rank) < 0)
     {
-        // TODO Log err
+        DYAD_LOG_ERR(ctx, "Could not pack Flux KVS transaction\n");
         return DYAD_FLUXFAIL;
     }
     int ret = dyad_kvs_commit(ctx, txn, upath, &f);
     if (ret < 0)
     {
-        // TODO log error
+        DYAD_LOG_ERR(ctx, "dyad_kvs_commit failed!\n");
         return ret;
     }
     return DYAD_OK;
@@ -245,14 +247,14 @@ int dyad_commit(dyad_ctx_t *ctx, const char *fname)
 {
     if (ctx == NULL)
     {
-        // TODO log
+        fprintf (stderr, "DYAD context not provided to dyad_commit\n");
         return DYAD_NOCTX;
     }
     int rc = -1;
     char upath[PATH_MAX] = {'\0'};
     if (!cmp_canonical_path_prefix (ctx->prod_managed_path, fname, upath, PATH_MAX))
     {
-        // TODO log error
+        DYAD_LOG_INFO (ctx, "%s is not in the Producer's managed path\n", fname);
         rc = 0;
         goto commit_done;
     }
@@ -282,7 +284,7 @@ int dyad_kvs_lookup(dyad_ctx_t *ctx, const char* kvs_topic, uint32_t *owner_rank
             );
     if (f == NULL)
     {
-        // TODO log
+        DYAD_LOG_ERR (ctx, "KVS lookup failed!\n");
         return DYAD_BADLOOKUP;
     }
     rc = flux_kvs_lookup_get_unpack(f, "i", owner_rank);
@@ -293,7 +295,7 @@ int dyad_kvs_lookup(dyad_ctx_t *ctx, const char* kvs_topic, uint32_t *owner_rank
     }
     if (rc < 0)
     {
-        // TODO log
+        DYAD_LOG_ERR(ctx, "Could not unpack owner's rank from KVS response\n");
         return DYAD_BADFETCH;
     }
     return DYAD_OK;
@@ -304,14 +306,14 @@ int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
 {
     if (ctx == NULL)
     {
-        // TODO log
+        fprintf (stderr, "DYAD context not provided to dyad_fetch\n");
         return DYAD_NOCTX;
     }
     int rc = -1;
     char upath[PATH_MAX] = {'\0'};
     if (!cmp_canonical_path_prefix(ctx->cons_managed_path, fname, upath, PATH_MAX))
     {
-        // TODO log error
+        DYAD_LOG_INFO (ctx, "%s is not in the Consumer's managed path\n", fname);
         return 0;
     }
     uint32_t owner_rank = 0;
@@ -327,13 +329,13 @@ int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
             );
     if (ctx->h == NULL)
     {
-        // TODO log
+        fprintf (stderr, "No Flux handle found in dyad_fetch!\n");
         return DYAD_NOCTX;
     }
     rc = dyad_kvs_lookup(ctx, topic, &owner_rank);
     if (rc != DYAD_OK)
     {
-        // TODO log error
+        DYAD_LOG_ERR(ctx, "dyad_kvs_lookup failed!\n");
         return rc;
     }
     if (ctx->shared_storage || (owner_rank == ctx->rank))
@@ -343,7 +345,7 @@ int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
     *resp = malloc(sizeof(struct dyad_kvs_response));
     if (*resp == NULL)
     {
-        // TODO log error
+        DYAD_LOG_ERR(ctx, "Cannot allocate a dyad_kvs_response_t object!\n");
         return DYAD_BADRESPONSE;
     }
     (*resp)->fpath = malloc(strlen(upath)+1);
@@ -374,7 +376,7 @@ int dyad_rpc_get(dyad_ctx_t *ctx, dyad_kvs_response_t *kvs_data,
             );
     if (f == NULL)
     {
-        // TODO log
+        DYAD_LOG_ERR(ctx, "Cannot send RPC to producer plugin!\n");
         return DYAD_BADRPC;
     }
     rc = flux_rpc_get_raw(f, (const void**) file_data, file_len);
@@ -385,7 +387,7 @@ int dyad_rpc_get(dyad_ctx_t *ctx, dyad_kvs_response_t *kvs_data,
     }
     if (rc < 0)
     {
-        // TODO log
+        DYAD_LOG_ERR(ctx, "Cannot get file back from plugin via RPC!\n");
         return DYAD_BADRPC;
     }
     return DYAD_OK;
@@ -396,7 +398,7 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
 {
     if (ctx == NULL)
     {
-        // TODO log
+        fprintf (stderr, "DYAD context not provided to dyad_pull\n");
         return DYAD_NOCTX;
     }
     int rc = -1;
@@ -425,7 +427,7 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
     mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     if ((strncmp (odir, ".", strlen(".")) != 0) &&
             (mkdir_as_needed (odir, m) < 0)) {
-        // TODO log that dirs could not be created
+        DYAD_LOG_ERR(ctx, "Cannot create needed directories for pulled file\n");
         rc = DYAD_BADFIO;
         goto pull_done;
     }
@@ -433,14 +435,14 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
     of = dyad_fopen(ctx, file_path, "w");
     if (of == NULL)
     {
-        // TODO log that file could not be opened
+        DYAD_LOG_ERR(ctx, "Cannot open file %s\n", file_path);
         rc = DYAD_BADFIO;
         goto pull_done;
     }
     size_t written_len = fwrite(file_data, sizeof(char), (size_t) file_len, of);
     if (written_len != (size_t) file_len)
     {
-        // TODO log that write did not work
+        DYAD_LOG_ERR(ctx, "fwrite of pulled file failed!\n");
         rc = DYAD_BADFIO;
         goto pull_done;
     }
