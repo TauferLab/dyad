@@ -45,6 +45,7 @@ int gen_path_key (const char* str, char* path_key, const size_t len,
     for (uint32_t d = 0u; d < depth; d++)
     {
         seed += seeds [d % 10];
+        // TODO add assert that str is not NULL
         MurmurHash3_x64_128 (str, strlen (str), seed, hash);
         uint32_t bin = (hash[0] ^ hash[1] ^ hash[2] ^ hash[3]) % width;
         n = snprintf (path_key+cx, len-cx, "%x.", bin);
@@ -504,10 +505,26 @@ int dyad_finalize(dyad_ctx_t *ctx)
     {
         return 0;
     }
-    flux_close(ctx->h);
-    free(ctx->kvs_namespace);
-    free(ctx->prod_managed_path);
-    free(ctx->cons_managed_path);
+    if (ctx->h != NULL)
+    {
+        flux_close(ctx->h);
+        ctx->h = NULL;
+    }
+    if (ctx->kvs_namespace != NULL)
+    {
+        free(ctx->kvs_namespace);
+        ctx->kvs_namespace = NULL;
+    }
+    if (ctx->prod_managed_path != NULL)
+    {
+        free(ctx->prod_managed_path);
+        ctx->prod_managed_path = NULL;
+    }
+    if (ctx->cons_managed_path != NULL)
+    {
+        free(ctx->cons_managed_path);
+        ctx->cons_managed_path = NULL;
+    }
     free(ctx);
     ctx = NULL;
     return 0;
