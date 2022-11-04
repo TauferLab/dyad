@@ -78,7 +78,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         }
         return DYAD_OK;
     }
-    *ctx = (dyad_ctx_t*) malloc(sizeof(dyad_ctx_t));
+    *ctx = (dyad_ctx_t*) malloc(sizeof(struct dyad_ctx));
     if (*ctx == NULL)
     {
         fprintf (stderr, "Could not allocate DYAD context!\n");
@@ -91,6 +91,12 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     (*ctx)->key_depth = key_depth;
     (*ctx)->key_bins = key_bins;
     (*ctx)->intercept = intercept;
+    if (kvs_namespace == NULL)
+    {
+        fprintf (stderr, "No KVS namespace provided!\n");
+        // TODO see if we want a different return val
+        return DYAD_NOCTX;
+    }
     (*ctx)->kvs_namespace = (char*) malloc(strlen(kvs_namespace)+1);
     if ((*ctx)->kvs_namespace == NULL)
     {
@@ -104,35 +110,53 @@ int dyad_init(bool debug, bool check, bool shared_storage,
             kvs_namespace,
             strlen(kvs_namespace)+1
            );
-    (*ctx)->prod_managed_path = (char*) malloc(strlen(prod_managed_path)+1);
-    if ((*ctx)->prod_managed_path == NULL)
+    if (prod_managed_path == NULL)
     {
-        fprintf (stderr, "Could not allocate buffer for Producer managed path!\n");
-        free((*ctx)->kvs_namespace);
-        free(*ctx);
-        *ctx = NULL;
-        return DYAD_NOCTX;
+        (*ctx)->prod_managed_path = NULL;
     }
-    strncpy(
-            (*ctx)->prod_managed_path,
-            prod_managed_path,
-            strlen(prod_managed_path)+1
-           );
-    (*ctx)->cons_managed_path = (char*) malloc(strlen(cons_managed_path)+1);
-    if ((*ctx)->cons_managed_path == NULL)
+    else
     {
-        fprintf (stderr, "Could not allocate buffer for Consumer managed path!\n");
-        free((*ctx)->kvs_namespace);
-        free((*ctx)->prod_managed_path);
-        free(*ctx);
-        *ctx = NULL;
-        return DYAD_NOCTX;
+        (*ctx)->prod_managed_path = (char*) malloc(strlen(prod_managed_path)+1);
+        if ((*ctx)->prod_managed_path == NULL)
+        {
+            fprintf (stderr, "Could not allocate buffer for Producer managed path!\n");
+            free((*ctx)->kvs_namespace);
+            free(*ctx);
+            *ctx = NULL;
+            return DYAD_NOCTX;
+        }
+        strncpy(
+                (*ctx)->prod_managed_path,
+                prod_managed_path,
+                strlen(prod_managed_path)+1
+            );
     }
-    strncpy(
-            (*ctx)->cons_managed_path,
-            cons_managed_path,
-            strlen(cons_managed_path)+1
-           );
+    if (cons_managed_path == NULL)
+    {
+        (*ctx)->cons_managed_path = NULL;
+    }
+    else
+    {
+        (*ctx)->cons_managed_path = (char*) malloc(strlen(cons_managed_path)+1);
+        if ((*ctx)->cons_managed_path == NULL)
+        {
+            fprintf (stderr, "Could not allocate buffer for Consumer managed path!\n");
+            free((*ctx)->kvs_namespace);
+            free((*ctx)->prod_managed_path);
+            free(*ctx);
+            *ctx = NULL;
+            return DYAD_NOCTX;
+        }
+        strncpy(
+                (*ctx)->cons_managed_path,
+                cons_managed_path,
+                strlen(cons_managed_path)+1
+            );
+    }
+    if ((*ctx)->prod_managed_path == NULL && (*ctx)->cons_managed_path == NULL)
+    {
+        fprintf (stderr, "Warning: DYAD instance is neither producer nor consumer!\n");
+    }
     (*ctx)->reenter = true;
     (*ctx)->h = flux_open(NULL, 0);
     if ((*ctx)->h == NULL)
