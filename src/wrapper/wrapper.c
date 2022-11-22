@@ -179,6 +179,7 @@ void dyad_sync_fini ()
 
 int open (const char *path, int oflag, ...)
 {
+    printf("In wrapped open\n")
     char *error = NULL;
     typedef int (*open_ptr_t) (const char *, int, mode_t, ...);
     open_ptr_t func_ptr = NULL;
@@ -226,6 +227,7 @@ real_call:;
 
 FILE *fopen (const char *path, const char *mode)
 {
+    printf("In wrapped fopen\n")
     char *error = NULL;
     typedef FILE *(*fopen_ptr_t) (const char *, const char *);
     fopen_ptr_t func_ptr = NULL;
@@ -266,6 +268,7 @@ real_call:
 
 int close (int fd)
 {
+    printf("In wrapped close\n")
     bool to_sync = false;
     char *error = NULL;
     typedef int (*close_ptr_t) (int);
@@ -291,6 +294,7 @@ int close (int fd)
             IPRINTF (ctx, "DYAD_SYNC: close sync not applicable. (invalid file descriptor)\n");
         }
       #endif // defined(IPRINTF_DEFINED)
+        to_sync = false;
         goto real_call;
     }
 
@@ -307,6 +311,7 @@ int close (int fd)
 
     if (get_path (fd, PATH_MAX-1, path) < 0) {
         IPRINTF (ctx, "DYAD_SYNC: unable to obtain file path from a descriptor.\n");
+        to_sync = false;
         goto real_call;
     }
 
@@ -341,6 +346,7 @@ real_call:; // semicolon here to avoid the error
 
 int fclose (FILE *fp)
 {
+    printf("In wrapped fclose\n")
     bool to_sync = false;
     char *error = NULL;
     typedef int (*fclose_ptr_t) (FILE *);
@@ -366,6 +372,7 @@ int fclose (FILE *fp)
             IPRINTF (ctx, "DYAD_SYNC: fclose sync not applicable. (invalid file pointer)\n");
         }
       #endif // defined(IPRINTF_DEFINED)
+        to_sync = false;
         goto real_call;
     }
 
@@ -382,6 +389,7 @@ int fclose (FILE *fp)
 
     if (get_path (fileno (fp), PATH_MAX-1, path) < 0) {
         IPRINTF (ctx, "DYAD_SYNC: unable to obtain file path from a descriptor.\n");
+        to_sync = false;
         goto real_call;
     }
 
