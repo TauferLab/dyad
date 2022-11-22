@@ -66,6 +66,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         const char *kvs_namespace, const char *prod_managed_path,
         const char *cons_managed_path, bool intercept, dyad_ctx_t **ctx)
 {
+    printf("In dyad_init\n");
     if (*ctx != NULL)
     {
         if ((*ctx)->initialized)
@@ -79,12 +80,14 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         }
         return DYAD_OK;
     }
+    printf("Allocating ctx\n");
     *ctx = (dyad_ctx_t*) malloc(sizeof(struct dyad_ctx));
     if (*ctx == NULL)
     {
         fprintf (stderr, "Could not allocate DYAD context!\n");
         return DYAD_NOCTX;
     }
+    printf("Setting ctx values that don't need allocation\n");
     **ctx = dyad_ctx_default;
     (*ctx)->debug = debug;
     (*ctx)->check = check;
@@ -92,6 +95,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     (*ctx)->key_depth = key_depth;
     (*ctx)->key_bins = key_bins;
     (*ctx)->intercept = intercept;
+    printf("Setting KVS namespace\n");
     if (kvs_namespace == NULL)
     {
         fprintf (stderr, "No KVS namespace provided!\n");
@@ -111,6 +115,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
             kvs_namespace,
             strlen(kvs_namespace)+1
            );
+    printf("Setting prod_managed_path\n");
     if (prod_managed_path == NULL)
     {
         (*ctx)->prod_managed_path = NULL;
@@ -132,6 +137,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
                 strlen(prod_managed_path)+1
             );
     }
+    printf("Setting cons_managed_path\n");
     if (cons_managed_path == NULL)
     {
         (*ctx)->cons_managed_path = NULL;
@@ -158,6 +164,7 @@ int dyad_init(bool debug, bool check, bool shared_storage,
     {
         fprintf (stderr, "Warning: DYAD instance is neither producer nor consumer!\n");
     }
+    printf("Opening Flux\n");
     (*ctx)->reenter = true;
     (*ctx)->h = flux_open(NULL, 0);
     if ((*ctx)->h == NULL)
@@ -165,11 +172,13 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         fprintf (stderr, "Could not open Flux handle!\n");
         return DYAD_FLUXFAIL;
     }
+    printf("Getting Flux Rank\n");
     if (flux_get_rank((*ctx)->h, &((*ctx)->rank)) < 0)
     {
         FLUX_LOG_ERR ((*ctx)->h, "Could not get Flux rank!\n");
         return DYAD_FLUXFAIL;
     }
+    printf("Initialization complete\n");
     (*ctx)->initialized = true;
     // TODO Print logging info
     return DYAD_OK;
@@ -210,6 +219,7 @@ __attribute__((annotate("@critical_path()")))
 int dyad_kvs_commit(dyad_ctx_t *ctx, flux_kvs_txn_t *txn,
         const char *upath, flux_future_t **f)
 {
+    printf("Committing data to KVS\n");
     *f = flux_kvs_commit(ctx->h, ctx->kvs_namespace,
             0, txn);
     if (*f == NULL)
@@ -217,9 +227,12 @@ int dyad_kvs_commit(dyad_ctx_t *ctx, flux_kvs_txn_t *txn,
         DYAD_LOG_ERR(ctx, "Could not commit transaction to Flux KVS\n");
         return DYAD_BADCOMMIT;
     }
+    printf("Wait for commit to complete\n");
     flux_future_wait_for(*f, -1.0);
+    printf("Destroy future for KVS commit\n");
     flux_future_destroy(*f);
     *f = NULL;
+    printf("Destroy transaction on KVS\n");
     flux_kvs_txn_destroy(txn);
     return DYAD_OK;
 }
@@ -229,11 +242,13 @@ __attribute__((annotate("@critical_path()")))
 #endif
 int publish_via_flux(dyad_ctx_t* ctx, const char *upath)
 {
+    printf("Initial publication setup\n");
     const char *prod_managed_path = ctx->prod_managed_path;
     flux_kvs_txn_t *txn = NULL;
     flux_future_t *f = NULL;
     const size_t topic_len = PATH_MAX;
     char topic[topic_len+1];
+    printf("Creating KVS key\n");
     memset(topic, '\0', topic_len+1);
     gen_path_key(
             upath,
@@ -248,17 +263,20 @@ int publish_via_flux(dyad_ctx_t* ctx, const char *upath)
         return DYAD_NOCTX;
     }
     // TODO FLUX_LOG_INFO
+    printf("Create KVS transaction\n");
     txn = flux_kvs_txn_create();
     if (txn == NULL)
     {
         DYAD_LOG_ERR(ctx, "Could not create Flux KVS transaction\n");
         return DYAD_FLUXFAIL;
     }
+    printf("Pack producer rank into transaction\n");
     if (flux_kvs_txn_pack(txn, 0, topic, "i", ctx->rank) < 0)
     {
         DYAD_LOG_ERR(ctx, "Could not pack Flux KVS transaction\n");
         return DYAD_FLUXFAIL;
     }
+    printf("Calling dyad_kvs_commit\n");
     int ret = dyad_kvs_commit(ctx, txn, upath, &f);
     if (ret < 0)
     {

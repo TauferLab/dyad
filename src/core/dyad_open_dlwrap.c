@@ -6,6 +6,7 @@
 
 FILE *fopen_real(const char *path, const char *mode)
 {
+    printf("Getting real fopen with dlsym\n");
     typedef FILE *(*fopen_real_ptr_t) (const char *, const char *);
     fopen_real_ptr_t func_ptr = (fopen_real_ptr_t) dlsym (RTLD_NEXT, "fopen");
     char *error = NULL;
@@ -14,13 +15,16 @@ FILE *fopen_real(const char *path, const char *mode)
         return NULL;
     }
 
+    printf("Calling C's fopen\n");
     return (func_ptr (path, mode));
 }
 
 FILE *dyad_fopen(dyad_ctx_t *ctx, const char *path, const char *mode)
 {
+    printf("In dyad_fopen\n");
     if (ctx->intercept)
     {
+        printf("Intercept mode detected\n");
         FILE* fobj = fopen_real(path, mode);
         if (fobj == NULL)
         {
