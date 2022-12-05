@@ -25,6 +25,23 @@ const struct dyad_ctx dyad_ctx_default = {
     NULL
 };
 
+int validate_context(dyad_ctx_t *ctx, bool check_cons, bool check_prod)
+{
+    if (!ctx || !ctx->h)
+    {
+        return DYAD_NOCTX;
+    }
+    if (check_cons && (ctx->cons_managed_path == NULL || strlen(ctx->cons_managed_path) == 0))
+    {
+        return DYAD_BADMANAGEDPATH;
+    }
+    if (check_prod && (ctx->prod_managed_path == NULL || strlen(ctx->prod_managed_path) == 0))
+    {
+        return DYAD_BADMANAGEDPATH;
+    }
+    return DYAD_OK;
+}
+
 int gen_path_key (const char* str, char* path_key, const size_t len,
         const uint32_t depth, const uint32_t width)
 {
@@ -186,13 +203,22 @@ int dyad_init(bool debug, bool check, bool shared_storage,
 
 int dyad_produce(dyad_ctx_t *ctx, const char *fname)
 {
+    int rc = validate_context(ctx, false, true);
+    if (DYAD_IS_ERROR(rc))
+    {
+        return rc;
+    }
     return dyad_commit(ctx, fname);
 }
 
 int dyad_consume(dyad_ctx_t *ctx, const char *fname)
 {
+    int rc = validate_context(ctx, true, false);
+    if (DYAD_IS_ERROR(rc))
+    {
+        return rc;
+    }
     dyad_kvs_response_t *resp = NULL;
-    int rc;
     rc = dyad_fetch(ctx, fname, &resp);
     if (rc != 0)
     {
@@ -288,12 +314,16 @@ int publish_via_flux(dyad_ctx_t* ctx, const char *upath)
 
 int dyad_commit(dyad_ctx_t *ctx, const char *fname)
 {
+    int rc = validate_context(ctx, false, true);
+    if (DYAD_IS_ERROR(rc))
+    {
+        return rc;
+    }
     if (ctx == NULL)
     {
         fprintf (stderr, "DYAD context not provided to dyad_commit\n");
         return DYAD_NOCTX;
     }
-    int rc = -1;
     char upath[PATH_MAX] = {'\0'};
     if (!cmp_canonical_path_prefix (ctx->prod_managed_path, fname, upath, PATH_MAX))
     {
@@ -347,12 +377,16 @@ int dyad_kvs_lookup(dyad_ctx_t *ctx, const char* kvs_topic, uint32_t *owner_rank
 int dyad_fetch(dyad_ctx_t *ctx, const char* fname,
         dyad_kvs_response_t **resp)
 {
+    int rc = validate_context(ctx, true, false);
+    if (DYAD_IS_ERROR(rc))
+    {
+        return rc;
+    }
     if (ctx == NULL)
     {
         fprintf (stderr, "DYAD context not provided to dyad_fetch\n");
         return DYAD_NOCTX;
     }
-    int rc = -1;
     char upath[PATH_MAX] = {'\0'};
     if (!cmp_canonical_path_prefix(ctx->cons_managed_path, fname, upath, PATH_MAX))
     {
@@ -439,12 +473,16 @@ int dyad_rpc_get(dyad_ctx_t *ctx, dyad_kvs_response_t *kvs_data,
 int dyad_pull(dyad_ctx_t *ctx, const char* fname,
         dyad_kvs_response_t *kvs_data)
 {
+    int rc = validate_context(ctx, true, false);
+    if (DYAD_IS_ERROR(rc))
+    {
+        return rc;
+    }
     if (ctx == NULL)
     {
         fprintf (stderr, "DYAD context not provided to dyad_pull\n");
         return DYAD_NOCTX;
     }
-    int rc = -1;
     const char *file_data = NULL;
     int file_len = 0;
     const char *odir = NULL;
@@ -566,7 +604,7 @@ int dyad_sync_directory(dyad_ctx_t *ctx, const char *path)
     reenter = ctx->reenter; // backup ctx->reenter
     if (ctx != NULL) ctx->reenter = false;
 
-    if ((odir_fd = dyad_open (ctx, odir, O_RDONLY)) < 0) {
+    if ((odir_fd = open (odir, O_RDONLY)) < 0) {
         IPRINTF (ctx, "Cannot open the directory \"%s\"\n", odir);
         rc = -1;
     } else {
@@ -574,7 +612,7 @@ int dyad_sync_directory(dyad_ctx_t *ctx, const char *path)
             IPRINTF (ctx, "Cannot flush the directory \"%s\"\n", odir);
             rc = -1;
         }
-        if (dyad_close (ctx, odir_fd) < 0) {
+        if (close (odir_fd) < 0) {
             IPRINTF (ctx, "Cannot close the directory \"%s\"\n", odir);
             rc = -1;
         }
