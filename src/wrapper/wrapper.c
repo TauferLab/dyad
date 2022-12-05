@@ -64,6 +64,7 @@ void dyad_sync_init (void)
     char *prod_managed_path = NULL;
     char *cons_managed_path = NULL;
     bool intercept = true;
+    dyad_dtl_mode_t dtl_mode = DYAD_DTL_UCX;
 
     DPRINTF (ctx, "DYAD_WRAPPER: Initializeing DYAD wrapper\n");
 
@@ -118,10 +119,27 @@ void dyad_sync_init (void)
         prod_managed_path = NULL;
     }
 
+    if ((e = getenv("DYAD_DTL_MODE")))
+    {
+        if (strncmp(e, "flux", 5) == 0 || strncmp(e, "FLUX", 5) == 0)
+        {
+            dtl_mode = DYAD_DTL_FLUX_RPC;
+        }
+        else if (strncmp(e, "ucx", 4) == 0 || strncmp(e, "UCX", 4) == 0)
+        {
+            dtl_mode = DYAD_DTL_UCX;
+        }
+        else
+        {
+            // TODO produce log/error message indicating invalid
+            // DTL mode
+        }
+    }
+
     printf("Calling dyad_init\n");
     int rc = dyad_init(debug, check, shared_storage, key_depth,
             key_bins, kvs_namespace, prod_managed_path,
-            cons_managed_path, intercept, &ctx);
+            cons_managed_path, intercept, dtl_mode, &ctx);
 
     printf("Checking for dyad_init error\n");
     if (DYAD_IS_ERROR(rc))
