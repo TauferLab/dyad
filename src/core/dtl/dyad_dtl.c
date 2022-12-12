@@ -61,7 +61,7 @@ dyad_core_err_t dyad_dtl_init(dyad_dtl_mode_t mode, flux_t *h,
                 h,
                 kvs_namespace,
                 debug,
-                (dyad_dtl_ucx_t**) (*dtl_handle)->real_dtl_handle
+                (dyad_dtl_ucx_t**)&(*dtl_handle)->real_dtl_handle
             );
         },
         // Flux RPC DTL
@@ -70,7 +70,7 @@ dyad_core_err_t dyad_dtl_init(dyad_dtl_mode_t mode, flux_t *h,
                 h,
                 kvs_namespace,
                 debug,
-                (dyad_dtl_flux_t**) (*dtl_handle)->real_dtl_handle
+                (dyad_dtl_flux_t**)&(*dtl_handle)->real_dtl_handle
             );
         },
         // Default case
