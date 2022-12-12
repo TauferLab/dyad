@@ -27,7 +27,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "urpc_ctx.h"
+#include "urpc_server_ctx.h"
 #include "utils.h"
 #include "read_all.h"
 
@@ -286,7 +286,7 @@ int mod_main (flux_t *h, int argc, char **argv)
     if (system (NULL) == 0) {
         FLUX_LOG_ERR (ctx->h, "URPC_MOD: shell is not available.\n");
         goto error;
-    } 
+    }
 
     if (argc != 1) {
         FLUX_LOG_ERR (ctx->h, "URPC_MOD: Missing argument. " \
