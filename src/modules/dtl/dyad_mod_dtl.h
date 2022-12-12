@@ -8,7 +8,7 @@ enum dyad_mod_dtl_mode {
     DYAD_DTL_UCX,
     // TODO Figure out how to use Flux RPC
     // as a fallback for if UCX fails
-    DYAD_DTL_UCX_W_FALLBACK,
+    // DYAD_DTL_UCX_W_FALLBACK,
 };
 
 typedef enum dyad_mod_dtl_mode dyad_mod_dtl_mode_t;
