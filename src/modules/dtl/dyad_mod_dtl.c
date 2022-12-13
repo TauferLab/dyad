@@ -57,6 +57,7 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode, flux_t *h,
         // UCX DTL
         {
             return dyad_mod_ucx_dtl_init(
+                h,
                 debug,
                 (dyad_mod_ucx_dtl_t**)&(*dtl_handle)->real_handle
             );

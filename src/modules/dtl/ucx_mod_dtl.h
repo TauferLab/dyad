@@ -11,6 +11,7 @@
 #endif
 
 struct dyad_mod_ucx_dtl {
+    flux_t *h;
     bool debug;
     ucp_context_h ucx_ctx;
     ucp_worker_h ucx_worker;
@@ -22,7 +23,7 @@ struct dyad_mod_ucx_dtl {
 
 typedef struct dyad_mod_ucx_dtl dyad_mod_ucx_dtl_t;
 
-int dyad_mod_ucx_dtl_init(bool debug, dyad_mod_ucx_dtl_t **dtl_handle);
+int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle);
 
 int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
         flux_msg_t *packed_obj, char **upath);

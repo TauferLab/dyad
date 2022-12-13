@@ -186,7 +186,7 @@ int mod_main (flux_t *h, int argc, char **argv)
 
     // Parse command-line arguments
     if (argc != 1) {
-        FLUX_LOG_ERR (ctx->h, "DYAD_MOD: Missing argument. " \
+        DYAD_LOG_ERR (ctx, "DYAD_MOD: Missing argument. " \
                 "Requires a local dyad path specified.\n");
         fprintf  (stderr,
                 "Missing argument. Requires a local dyad path specified.\n");
@@ -196,22 +196,22 @@ int mod_main (flux_t *h, int argc, char **argv)
     mkdir_as_needed (ctx->dyad_path, m); // Create the managed path if it doesn't exist
 
     if (dyad_open (h) < 0) {
-        FLUX_LOG_ERR (ctx->h, "dyad_open failed");
+        DYAD_LOG_ERR (ctx, "dyad_open failed");
         goto error;
     }
 
     // Start the Plugin
     fprintf (stderr, "dyad module begins using \"%s\"\n", argv[0]);
-    FLUX_LOG_INFO (ctx->h, "dyad module begins using \"%s\"\n", argv[0]);
+    DYAD_LOG_INFO (ctx, "dyad module begins using \"%s\"\n", argv[0]);
 
     if (flux_msg_handler_addvec (ctx->h, htab, (void *)h,
                 &ctx->handlers) < 0) {
-        FLUX_LOG_ERR (ctx->h, "flux_msg_handler_addvec: %s\n", strerror (errno));
+        DYAD_LOG_ERR (ctx, "flux_msg_handler_addvec: %s\n", strerror (errno));
         goto error;
     }
 
     if (flux_reactor_run (flux_get_reactor (ctx->h), 0) < 0) {
-        FLUX_LOG_ERR (ctx->h, "flux_reactor_run: %s", strerror (errno));
+        DYAD_LOG_ERR (ctx, "flux_reactor_run: %s", strerror (errno));
         goto error;
     }
 

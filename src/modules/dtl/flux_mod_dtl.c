@@ -22,7 +22,7 @@ int dyad_mod_flux_dtl_rpc_unpack(dyad_mod_flux_dtl_t *dtl_handle,
     );
     if (errcode < 0)
     {
-        // TODO log error
+        FLUX_LOG_ERR(dtl_handle->h, "Could not unpack Flux message from consumer!\n");
         return -1;
     }
     dtl_handle->msg = packed_obj;
@@ -39,12 +39,12 @@ int dyad_mod_flux_dtl_send(dyad_mod_flux_dtl_t *dtl_handle, void *buf, size_t bu
     int errcode = flux_respond_raw(dtl_handle->h, dtl_handle->msg, buf, (int)buflen);
     if (errcode < 0)
     {
-        // TODO log error
+        FLUX_LOG_ERR(dtl_handle->h, "Could not send Flux RPC response containing file contents!\n");
         return -1;
     }
     if (dtl_handle->debug)
     {
-        // TODO log info msg
+        FLUX_LOG_INFO(dtl_handle->h, "Successfully sent file contents to consumer!\n");
     }
     return 0;
 }

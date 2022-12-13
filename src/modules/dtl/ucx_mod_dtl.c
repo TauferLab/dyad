@@ -20,9 +20,10 @@ static void dyad_ucx_send_handler(void *req, ucs_status_t status, void *ctx)
     real_req->completed = 1;
 }
 
-int dyad_mod_ucx_dtl_init(bool debug, dyad_mod_ucx_dtl_t **dtl_handle)
+int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle)
 {
     *dtl_handle = malloc(sizeof(struct dyad_mod_ucx_dtl));
+    (*dtl_handle)->h = h;
     (*dtl_handle)->debug = debug;
     (*dtl_handle)->ucx_ctx = NULL;
     (*dtl_handle)->ucx_worker = NULL;
@@ -37,7 +38,7 @@ int dyad_mod_ucx_dtl_init(bool debug, dyad_mod_ucx_dtl_t **dtl_handle)
     status = ucp_config_read(NULL, NULL, &config);
     if (UCX_CHECK(status))
     {
-        // TODO log error
+        FLUX_LOG_ERR(h, "Could not read UCP config for data transport!\n");
         goto error;
     }
     ucp_params.field_mask = UCP_PARAMS_FIELD_FEATURES |
@@ -61,7 +62,7 @@ int dyad_mod_ucx_dtl_init(bool debug, dyad_mod_ucx_dtl_t **dtl_handle)
     ucp_config_release(config);
     if (UCX_CHECK(status))
     {
-        // TODO log error
+        FLUX_LOG_ERR(h, "Could not initialize UCX for data transport!\n");
         goto error;
     }
     // Flux modules are single-threaded, so enable single-thread mode in UCX
@@ -74,7 +75,7 @@ int dyad_mod_ucx_dtl_init(bool debug, dyad_mod_ucx_dtl_t **dtl_handle)
     );
     if (UCX_CHECK(status))
     {
-        // TODO log error
+        FLUX_LOG_ERR(h, "Could not create UCP worker for data transport!\n");
         goto error;
     }
     return 0;
@@ -105,7 +106,7 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
     );
     if (errcode < 0)
     {
-        // TODO log error
+        FLUX_LOG_ERR(dtl_handle->h, "Could not unpack Flux message from consumer!\n");
         return -1;
     }
     return 0;
@@ -139,7 +140,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
 {
     if (dtl_handle->curr_ep == NULL)
     {
-        // TODO log warning
+        FLUX_LOG_INFO(dtl_handle->h, "UCP endpoint was not created prior to invoking send!\n");
         return 1;
     }
     ucp_request_param_t params;
@@ -179,7 +180,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     }
     if (UCX_CHECK(status))
     {
-        // TODO log error
+        FLUX_LOG_INFO(dtl_handle->h, "UCP Tag Send failed!\n");
         return -1;
     }
     return 0;
@@ -218,7 +219,7 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
                 }
                 if (UCX_CHECK(status))
                 {
-                    // TODO log error
+                    FLUX_LOG_ERR(dtl_handle->h, "Could not successfully close Endpoint! However, endpoint was released.\n");
                 }
             }
             dtl_handle->curr_ep = NULL;
@@ -253,6 +254,7 @@ int dyad_mod_ucx_dtl_finalize(dyad_mod_dtl_t *dtl_handle)
             ucp_cleanup(dtl_handle->ucx_ctx);
             dtl_handle->ucx_ctx = NULL;
         }
+        dtl_handle->h = NULL;
         free(dtl_handle);
         dtl_handle = NULL;
     }
