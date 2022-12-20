@@ -2,7 +2,12 @@ lib_LTLIBRARIES = libdyad_fstream.la
 
 libdyad_fstream_la_SOURCES = dyad_stream_core.cpp
 libdyad_fstream_la_LIBADD = $(top_builddir)/src/core/libdyad_core.la
-libdyad_fstream_la_CPPFLAGS = -DDYAD_CHECK=1 -I$(top_builddir)/src/utils -I$(top_builddir)/src/core
+libdyad_fstream_la_CPPFLAGS = \
+    $(AM_CPPFLAGS) \
+	$(DYAD_DEBUG_CPPFLAGS) \
+	-I$(top_builddir)/src/utils \
+	-I$(top_builddir)/src/core
+libdyad_fstream_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version -no-undefined
 if PERFFLOW
 libdyad_fstream_la_LIBADD += $(PERFFLOW_LIBS)
 libdyad_fstream_la_CPPFLAGS += $(PERFFLOW_PLUGIN_CPPFLAGS) $(PERFFLOW_CFLAGS) -DDYAD_PERFFLOW=1

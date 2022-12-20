@@ -137,6 +137,17 @@ AC_CHECK_HEADERS( \
     stdint.h \
     [sys/param.h] \
     unistd.h \
+    libgen.h \
+    dlfcn.h \
+    sys/types.h \
+    sys/stat.h \
+    linux/limits.h \
+    limit.h \
+    stdlib.h \
+    stdarg.h \
+    stdbool.h \
+    stddef.h \
+    string.h
 )
 
 #################################################################
@@ -179,21 +190,34 @@ AC_FUNC_REALLOC
 # Check other necessary functions
 AC_CHECK_FUNCS( \
     clock_gettime \
-    getcwd \
     memset \
     mkdir \
+    mkpath \
     realpath \
-    regcomp \
+    readlink \
+    dirnamme \
     setenv \
-    strerror \
+    getenv \
+    fsync \
+    nanosleep
 )
 
 #######################################
 # Add any necessary compilation flags #
 #######################################
 if test "x$enable_debug" = xyes; then
-    CPPFLAGS="$CPPFLAGS -DDYAD_FULL_DEBUG=1 -DDYAD_LOGGING_ON=1"
+    AC_SUBST([DYAD_DEBUG_CPPFLAGS], [-DDYAD_FULL_DEBUG=1 -DDYAD_LOGGING_ON=1])
+    if test "x$enable_urpc" = "xyes"; then
+        AC_SUBST([URPC_DEBUG_CPPFLAGS], [-DURPC_FULL_DEBUG=1 -DURPC_LOGGING_ON=1])
+    fi
 fi
+
+STRNCAT_SPECIFIC_CFLAGS=;
+if `$CXX -v 2>&1 | grep -v icc | grep 'gcc version' >/dev/null 2>&1` ; then
+  STRNCAT_SPECIFIC_CFLAGS="-Wstringop-overflow=0"
+fi
+
+AC_SUBST(STRNCAT_SPECIFIC_CFLAGS, $STRNCAT_SPECIFIC_CFLAGS)
 
 ########################
 # Configures Makefiles #
@@ -211,3 +235,26 @@ AC_CONFIG_FILES([Makefile
 # Complete Autoconf #
 #####################
 AC_OUTPUT
+
+##########################################
+# Print Summary of Configuration Options #
+##########################################
+echo "
+  $PACKAGE_NAME version $PACKAGE_VERSION
+  Prefix...........: $prefix
+  Debug Build......: $debug
+  C Compiler.......: $CC
+  C++ Compiler.....: $CXX
+  CFLAGS...........: $CFLAGS
+  CPPFLAGS.......... $CPPFLAGS
+  CXXFLAGS.......... $CXXFLAGS
+  FLUX.............: $FLUX
+  FLUX_VERSION.....: $($FLUX version | sed -n 's/libflux-core:\t*//p')
+  FLUX_CORE_CFLAGS.: $FLUX_CORE_CFLAGS
+  FLUX_CORE_LIBS...: $FLUX_CORE_LIBS
+  LIBFLUX_VERSION..: $LIBFLUX_VERSION
+  FLUX_PREFIX......: $FLUX_PREFIX
+  LDFLAGS..........: $LDFLAGS
+  LIBS.............: $LIBS
+  Linker...........: $LD
+"
