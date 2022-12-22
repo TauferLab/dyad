@@ -15,6 +15,7 @@ libdyad_mod_dtl_la_LIBADD = \
 libdyad_mod_dtl_la_CPPFLAGS = \
 	$(FLUX_CORE_CFLAGS) \
 	-I$(top_builddir)/src/modules \
+	-I$(top_builddir)/src/utils \
 	$(UCX_CFLAGS)
 
 if PERFFLOW

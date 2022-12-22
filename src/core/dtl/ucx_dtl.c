@@ -2,6 +2,8 @@
 
 #include "dyad_err.h"
 
+#include "flux_b64.h"
+
 #ifdef __cplusplus
 #include <cstdlib>
 #include <cstdint>
@@ -223,6 +225,22 @@ dyad_core_err_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
 dyad_core_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
         json_t **packed_obj)
 {
+    if (dtl_handle->consumer_address == NULL)
+    {
+        // TODO log error
+        return DYAD_BADPACK;
+    }
+    size_t enc_len = base64_encoded_length(dtl_handle->addr_len);
+    // Add 1 to encoded length because the encoded buffer will be
+    // packed as if it is a string
+    char* enc_buf = malloc(enc_len+1);
+    ssize_t enc_size = base64_encode(enc_buf, enc_len+1, dtl_handle->consumer_address, dtl_handle->addr_len);
+    if (enc_size < 0)
+    {
+        // TODO log error
+        free(enc_buf);
+        return DYAD_BADPACK;
+    }
     // Use Jansson to pack the tag and UCX address into
     // the payload to be sent via RPC to the producer plugin
     *packed_obj = json_pack(
@@ -232,8 +250,9 @@ dyad_core_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *up
         "tag",
         dtl_handle->comm_tag,
         "ucx_addr",
-        dtl_handle->consumer_address, dtl_handle->addr_len
+        enc_buf, enc_len
     );
+    free(enc_buf);
     // If the packing failed, log an error
     if (*packed_obj == NULL)
     {

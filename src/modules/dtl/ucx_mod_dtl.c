@@ -1,4 +1,7 @@
 #include "ucx_mod_dtl.h"
+
+#include "flux_b64.h"
+
 #include <cstddef>
 
 #define UCX_CHECK(status_code) return status_code != UCS_OK;
@@ -88,6 +91,8 @@ error:;
 int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
         flux_msg_t *packed_obj, char **upath)
 {
+    char* enc_addr;
+    size_t enc_addr_len;
     int errcode = flux_request_unpack(packed_obj,
         NULL,
         "{s:s, s:I, s:s%}",
@@ -95,18 +100,24 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
         upath,
         "tag",
         dtl_handle->curr_comm_tag,
-        // TODO confirm that the s% (un)pack is fine for UCX
-        // addresses. If not, save address to tmp buffer. Then,
-        // copy to new buffer of size "addr_len - 1". The reason
-        // for this is because Jansson is likely encoding this
-        // as a NULL-terminated string, which may cause issues
         "ucx_addr",
-        &dtl_handle->curr_cons_addr,
-        &dtl_handle->addr_len
+        &enc_addr,
+        &enc_addr_len
     );
     if (errcode < 0)
     {
         FLUX_LOG_ERR(dtl_handle->h, "Could not unpack Flux message from consumer!\n");
+        return -1;
+    }
+    dtl_handle->addr_len = base64_decoded_length(enc_addr_len);
+    dtl_handle->curr_cons_addr = (ucp_address_t*) malloc(dtl_handle->addr_len);
+    ssize_t decoded_len = base64_decode((char*)dtl_handle->curr_cons_addr, dtl_handle->addr_len, enc_addr, end_addr_len);
+    if (decoded_len < 0)
+    {
+        // TODO log error
+        free(dtl_handle->curr_cons_addr);
+        dtl_handle->curr_cons_addr = NULL;
+        dtl_handle->addr_len = 0;
         return -1;
     }
     return 0;
@@ -224,13 +235,12 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
             }
             dtl_handle->curr_ep = NULL;
         }
-        // Since the address is packed with Jansson, the address should be
-        // automatically deallocated when the Flux RPC message is released
-        //
-        // TODO if the note about unpacking above proves true, refactor this
-        // so that we are manually freeing the buffer
-        dtl_handle->curr_cons_addr = NULL;
-        dtl_handle->addr_len = 0;
+        if (dtl_handle->curr_cons_addr != NULL)
+        {
+            free(dtl_handle->curr_cons_addr);
+            dtl_handle->curr_cons_addr = NULL;
+            dtl_handle->addr_len = 0;
+        }
         dtl_handle->curr_comm_tag = 0;
     }
     return 0;
