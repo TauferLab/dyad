@@ -8,6 +8,7 @@
  * SPDX-License-Identifier: LGPL-3.0
  \************************************************************/
 
+#include "dtl/dyad_mod_dtl.h"
 #if defined(__cplusplus)
 #include <cstdio>
 #include <cstdlib>
@@ -29,7 +30,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "dyad_flux_log.h"
-#include "dyad_ctx.h"
+#include "dyad_mod_dtl.h"
 #include "utils.h"
 #include "read_all.h"
 
@@ -42,6 +43,7 @@ struct dyad_mod_ctx {
     bool debug;
     flux_msg_handler_t **handlers;
     const char *dyad_path;
+    dyad_mod_dtl_t *dtl_handle;
 };
 
 typedef struct dyad_mod_ctx dyad_mod_ctx_t;
@@ -60,6 +62,11 @@ static void freectx (void *arg)
 {
     dyad_mod_ctx_t *ctx = (dyad_mod_ctx_t *)arg;
     flux_msg_handler_delvec (ctx->handlers);
+    if (ctx->dtl_handle != NULL)
+    {
+        dyad_mod_dtl_finalize(ctx->dtl_handle);
+        ctx->dtl_handle = NULL;
+    }
     free (ctx);
 }
 
@@ -73,6 +80,7 @@ static dyad_mod_ctx_t *getctx (flux_t *h)
         ctx->debug = false;
         ctx->handlers = NULL;
         ctx->dyad_path = NULL;
+        ctx->dtl_handle = NULL;
         if (flux_aux_set (h, "dyad", ctx, freectx) < 0) {
             FLUX_LOG_ERR (h, "DYAD_MOD: flux_aux_set() failed!\n");
             goto error;
@@ -103,13 +111,15 @@ static void dyad_fetch_request_cb (flux_t *h, flux_msg_handler_t *w,
     char *upath = NULL;
     char fullpath[PATH_MAX+1] = {'\0'};
     int saved_errno = errno;
+    int rc;
     errno = 0;
 
     if (flux_msg_get_userid (msg, &userid) < 0)
         goto error;
 
     // UCX_TODO Tweak unpack to retrieve consumer UCP address
-    if (flux_request_unpack (msg, NULL, "{s:s}", "upath", &upath) < 0)
+    rc = dyad_mod_dtl_rpc_unpack(ctx->dtl_handle, msg, &upath);
+    if (rc < 0)
         goto error;
 
     FLUX_LOG_INFO (h, "DYAD_MOD: requested user_path: %s", upath);
@@ -132,11 +142,30 @@ static void dyad_fetch_request_cb (flux_t *h, flux_msg_handler_t *w,
     }
     if ((inlen = read_all (fd, &inbuf)) < 0) {
         FLUX_LOG_ERR (h, "DYAD_MOD: Failed to load file \"%s\".\n", fullpath);
+        close (fd);
         goto error;
     }
     close (fd);
 
     // UCX_TODO add code to send file to consumer
+    rc = dyad_mod_dtl_establish_connection(ctx->dtl_handle);
+    if (rc < 0)
+    {
+        // TODO log error
+        goto error;
+    }
+    rc = dyad_mod_dtl_send(ctx->dtl_handle, inbuf, inlen);
+    if (rc == 1)
+    {
+        DYAD_LOG_ERR(ctx, "Connection was not correctly established before send was called\n");
+        goto error;
+    }
+    else if (rc < 0)
+    {
+        // TODO log error
+        goto error;
+    }
+    rc = dyad_mod_dtl_close_connection(ctx->dtl_handle);
 
 error:
     if (flux_respond_error (h, msg, errno, NULL) < 0) {
@@ -149,7 +178,7 @@ done:
     return;
 }
 
-static int dyad_open (flux_t *h)
+static int dyad_open (flux_t *h, dyad_mod_dtl_mode dtl_mode)
 {
     dyad_mod_ctx_t *ctx = getctx (h);
     int rc = -1;
@@ -157,7 +186,12 @@ static int dyad_open (flux_t *h)
 
     if ((e = getenv ("DYAD_MOD_DEBUG")) && atoi (e))
         ctx->debug = true;
-    rc = 0;
+    rc = dyad_mod_dtl_init(
+        dtl_mode,
+        h,
+        ctx->debug,
+        &(ctx->dtl_handle)
+    );
 
     return rc;
 }
@@ -166,6 +200,19 @@ static const struct flux_msg_handler_spec htab[] = {
     { FLUX_MSGTYPE_REQUEST, "dyad.fetch",  dyad_fetch_request_cb, 0 },
     FLUX_MSGHANDLER_TABLE_END
 };
+
+void usage()
+{
+    // TODO make absolutely sure this type of string
+    // literal concatenation works in C90.
+    fprintf(stderr,
+            "Usage: flux module load dyad.so <MANAGED_PATH> <DTL_MODE>\n\n"
+            "Arguments:\n==========\n"
+            "  * MANAGED_PATH: path for DYAD to manage\n"
+            "  * DTL_MODE: mode for data movement. Can be one of:\n"
+            "    - FLUX: use Flux RPC for data movement\n"
+            "    - UCX: use UCX for data movement\n");
+}
 
 int mod_main (flux_t *h, int argc, char **argv)
 {
@@ -185,17 +232,31 @@ int mod_main (flux_t *h, int argc, char **argv)
     ctx = getctx (h);
 
     // Parse command-line arguments
-    if (argc != 1) {
+    if (argc != 2) {
         DYAD_LOG_ERR (ctx, "DYAD_MOD: Missing argument. " \
-                "Requires a local dyad path specified.\n");
-        fprintf  (stderr,
-                "Missing argument. Requires a local dyad path specified.\n");
+                "Requires a local dyad path and a DTL mode specified.\n");
+        usage();
         goto error;
     }
     (ctx->dyad_path) = argv[0]; // First (and only) argument is the managed path
+    size_t mode_str_len = strlen(argv[1]);
+    dyad_mod_dtl_mode dtl_mode;
+    if (strncmp(argv[1], "FLUX", mode_str_len <= 4 ? mode_str_len : 4))
+    {
+        dtl_mode = DYAD_DTL_FLUX_RPC;
+    }
+    else if (strncmp(argv[1], "UCX", mode_str_len <= 3 ? mode_str_len : 3))
+    {
+        dtl_mode = DYAD_DTL_UCX;
+    }
+    else
+    {
+        DYAD_LOG_ERR (ctx, "DYAD_MOD: invalid DTL mode (%s)\n", argv[1]);
+        goto error;
+    }
     mkdir_as_needed (ctx->dyad_path, m); // Create the managed path if it doesn't exist
 
-    if (dyad_open (h) < 0) {
+    if (dyad_open (h, dtl_mode) < 0) {
         DYAD_LOG_ERR (ctx, "dyad_open failed");
         goto error;
     }
@@ -235,13 +296,6 @@ cleanup:;
         free(kvs_key);
         kvs_key = NULL;
     }
-    // Release the plugin UCP address if not already done
-    if (plugin_address != NULL)
-    {
-        ucp_worker_release_address(ctx->ucx_worker, plugin_address);
-        plugin_address = NULL;
-    }
-    ucx_finalize(ctx);
     return final_retval;
 }
 

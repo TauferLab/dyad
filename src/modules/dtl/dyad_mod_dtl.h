@@ -14,11 +14,10 @@ enum dyad_mod_dtl_mode {
 typedef enum dyad_mod_dtl_mode dyad_mod_dtl_mode_t;
 
 int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode, flux_t *h,
-        const char *kvs_namespace, bool debug,
-        dyad_mod_dtl_t **dtl_handle);
+        bool debug, dyad_mod_dtl_t **dtl_handle);
 
-int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle, json_t *packed_obj,
-        char **upath);
+int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
+        flux_msg_t *packed_obj, char **upath);
 
 int dyad_mod_dtl_establish_connection(dyad_mod_dtl_t *dtl_handle);
 
