@@ -11,7 +11,7 @@ int dyad_mod_flux_dtl_init(flux_t *h, bool debug,
 }
 
 int dyad_mod_flux_dtl_rpc_unpack(dyad_mod_flux_dtl_t *dtl_handle,
-        flux_msg_t *packed_obj, char **upath)
+        const flux_msg_t *packed_obj, char **upath)
 {
    int errcode = flux_request_unpack(
         packed_obj,

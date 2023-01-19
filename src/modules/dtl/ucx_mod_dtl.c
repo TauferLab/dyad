@@ -2,9 +2,11 @@
 
 #include "flux_b64.h"
 
-#include <cstddef>
+#define UCX_CHECK(status_code) status_code != UCS_OK
 
-#define UCX_CHECK(status_code) return status_code != UCS_OK;
+#if !defined(UCP_API_VERSION)
+#error Due to UCP API changes, we must be able to determine the version of UCP! Please use a version of UCX with the UCP_API_VERSION macro defined!
+#endif
 
 struct mod_request {
     int completed;
@@ -17,11 +19,19 @@ static void dyad_mod_ucx_request_init(void *request)
     real_request->completed = 0;
 }
 
+#if UCP_API_VERSION >= UCP_VERSION(1, 9)
 static void dyad_ucx_send_handler(void *req, ucs_status_t status, void *ctx)
 {
     mod_request_t *real_req = (mod_request_t*)req;
     real_req->completed = 1;
 }
+#else
+static void dyad_ucx_send_handler(void *req, ucs_status_t status)
+{
+    mod_request_t *real_req = (mod_request_t*)req;
+    real_req->completed = 1;
+}
+#endif
 
 int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle)
 {
@@ -37,14 +47,14 @@ int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle
     ucp_params_t ucp_params;
     ucp_worker_params_t worker_params;
     ucp_config_t *config;
-    ucx_status_t status;
+    ucs_status_t status;
     status = ucp_config_read(NULL, NULL, &config);
     if (UCX_CHECK(status))
     {
         FLUX_LOG_ERR(h, "Could not read UCP config for data transport!\n");
         goto error;
     }
-    ucp_params.field_mask = UCP_PARAMS_FIELD_FEATURES |
+    ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES |
         UCP_PARAM_FIELD_REQUEST_SIZE |
         UCP_PARAM_FIELD_REQUEST_INIT;
     ucp_params.features = UCP_FEATURE_TAG |
@@ -52,7 +62,7 @@ int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle
         UCP_FEATURE_WAKEUP;
     ucp_params.request_size = sizeof(struct mod_request);
     ucp_params.request_init = dyad_mod_ucx_request_init;
-    status = ucp_init(&ucp_params, config, (*dtl_handle)->ucx_ctx);
+    status = ucp_init(&ucp_params, config, &((*dtl_handle)->ucx_ctx));
     if (debug)
     {
         ucp_config_print(
@@ -89,7 +99,7 @@ error:;
 }
 
 int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
-        flux_msg_t *packed_obj, char **upath)
+        const flux_msg_t *packed_obj, char **upath)
 {
     char* enc_addr;
     size_t enc_addr_len;
@@ -111,7 +121,7 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
     }
     dtl_handle->addr_len = base64_decoded_length(enc_addr_len);
     dtl_handle->curr_cons_addr = (ucp_address_t*) malloc(dtl_handle->addr_len);
-    ssize_t decoded_len = base64_decode((char*)dtl_handle->curr_cons_addr, dtl_handle->addr_len, enc_addr, end_addr_len);
+    ssize_t decoded_len = base64_decode((char*)dtl_handle->curr_cons_addr, dtl_handle->addr_len, enc_addr, enc_addr_len);
     if (decoded_len < 0)
     {
         // TODO log error
@@ -126,7 +136,7 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
 int dyad_mod_ucx_dtl_establish_connection(dyad_mod_ucx_dtl_t *dtl_handle)
 {
     ucp_ep_params_t params;
-    params.field_mask = UCP_EP_PARAM_REMOTE_ADDRESS |
+    params.field_mask = UCP_EP_PARAM_FIELD_REMOTE_ADDRESS |
         UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE;
     params.address = dtl_handle->curr_cons_addr;
     params.err_mode = UCP_ERR_HANDLING_MODE_NONE; // TODO decide if we want to enable
@@ -154,6 +164,12 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
         FLUX_LOG_INFO(dtl_handle->h, "UCP endpoint was not created prior to invoking send!\n");
         return 1;
     }
+    ucs_status_ptr_t stat_ptr;
+    // ucp_tag_send_sync_nbx is the prefered version of this send since UCX 1.9
+    // However, some systems (e.g., Lassen) may have an older verison
+    // This conditional compilation will use ucp_tag_send_sync_nbx if using UCX 1.9+,
+    // and it will use the deprecated ucp_tag_send_sync_nb if using UCX < 1.9.
+#if UCP_API_VERSION >= UCP_VERSION(1, 9)
     ucp_request_param_t params;
     params.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK;
     params.cb.send = dyad_ucx_send_handler;
@@ -162,13 +178,23 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     //           operation is completed
     //   * send_sync: async send that is completed when the message's
     //                tag is matched on the receiver
-    ucs_status_ptr_t stat_ptr = ucp_tag_send_sync_nbx(
+    stat_ptr = ucp_tag_send_sync_nbx(
         dtl_handle->curr_ep,
         buf,
         buflen,
         dtl_handle->curr_comm_tag,
         params
     );
+#else
+    stat_ptr = ucp_tag_send_sync_nb(
+        dtl_handle->curr_ep,
+        buf,
+        buflen,
+        UCP_DATATYPE_CONTIG,
+        dtl_handle->curr_comm_tag,
+        dyad_ucx_send_handler
+    );
+#endif
     ucs_status_t status;
     if (UCS_PTR_IS_ERR(stat_ptr))
     {
@@ -205,10 +231,19 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
         if (dtl_handle->curr_ep != NULL)
         {
             ucs_status_ptr_t stat_ptr;
+            // ucp_tag_send_sync_nbx is the prefered version of this send since UCX 1.9
+            // However, some systems (e.g., Lassen) may have an older verison
+            // This conditional compilation will use ucp_tag_send_sync_nbx if using UCX 1.9+,
+            // and it will use the deprecated ucp_tag_send_sync_nb if using UCX < 1.9.
+#if UCP_API_VERSION >= UCP_VERSION(1, 9)
             ucp_request_param_t close_params;
             close_params.op_attr_mask = UCP_OP_ATTR_FIELD_FLAGS;
             close_params.flags = 0; // TODO change if we decide to enable err handling mode
             stat_ptr = ucp_ep_close_nbx(dtl_handle->curr_ep, &close_params);
+#else
+            // TODO change to FORCE if we decide to enable err handleing mode
+            stat_ptr = ucp_ep_close_nb(dtl_handle->curr_ep, UCP_EP_CLOSE_MODE_FLUSH);
+#endif
             if (stat_ptr != NULL)
             {
                 // Endpoint close is in-progress.
@@ -246,7 +281,7 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
     return 0;
 }
 
-int dyad_mod_ucx_dtl_finalize(dyad_mod_dtl_t *dtl_handle)
+int dyad_mod_ucx_dtl_finalize(dyad_mod_ucx_dtl_t *dtl_handle)
 {
     if (dtl_handle != NULL)
     {

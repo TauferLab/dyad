@@ -11,7 +11,7 @@ dyad_la_LDFLAGS = \
 	-no-undefined \
 	-shared
 dyad_la_LIBADD = \
-	$(top_builddir)/src/module/dtl/libdyad_mod_dtl.la \
+	$(top_builddir)/src/modules/dtl/libdyad_mod_dtl.la \
 	$(top_builddir)/src/utils/libutils.la \
 	$(FLUX_CORE_LIBS)
 dyad_la_CPPFLAGS = \
@@ -19,7 +19,7 @@ dyad_la_CPPFLAGS = \
 	$(FLUX_CORE_CFLAGS) \
 	$(DYAD_DEBUG_CPPFLAGS) \
 	-I$(top_builddir)/src/utils \
-	-I$(top_builddir)/src/module/dtl
+	-I$(top_builddir)/src/modules/dtl
 if PERFFLOW
 dyad_la_LIBADD += $(PERFFLOW_LIBS)
 dyad_la_CPPFLAGS += \

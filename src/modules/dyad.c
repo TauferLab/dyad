@@ -178,7 +178,7 @@ done:
     return;
 }
 
-static int dyad_open (flux_t *h, dyad_mod_dtl_mode dtl_mode)
+static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode)
 {
     dyad_mod_ctx_t *ctx = getctx (h);
     int rc = -1;
@@ -240,7 +240,7 @@ int mod_main (flux_t *h, int argc, char **argv)
     }
     (ctx->dyad_path) = argv[0]; // First (and only) argument is the managed path
     size_t mode_str_len = strlen(argv[1]);
-    dyad_mod_dtl_mode dtl_mode;
+    dyad_mod_dtl_mode_t dtl_mode;
     if (strncmp(argv[1], "FLUX", mode_str_len <= 4 ? mode_str_len : 4))
     {
         dtl_mode = DYAD_DTL_FLUX_RPC;

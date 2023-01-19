@@ -79,7 +79,7 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode, flux_t *h,
 }
 
 int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
-        flux_msg_t *packed_obj, char **upath)
+        const flux_msg_t *packed_obj, char **upath)
 {
     SWITCH_OVER_DTL_MODES(dtl_handle->mode,
         // UCX DTL

@@ -1,6 +1,15 @@
 #ifndef __DYAD_MOD_DTL_H__
 #define __DYAD_MOD_DTL_H__
 
+#include <flux/core.h>
+
+#if defined(__cplusplus)
+#include <cstdlib>
+#else
+#include <stdbool.h>
+#include <stdlib.h>
+#endif /* defined(__cplusplus) */
+
 typedef struct dyad_mod_dtl dyad_mod_dtl_t;
 
 enum dyad_mod_dtl_mode {
@@ -17,7 +26,7 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode, flux_t *h,
         bool debug, dyad_mod_dtl_t **dtl_handle);
 
 int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
-        flux_msg_t *packed_obj, char **upath);
+        const flux_msg_t *packed_obj, char **upath);
 
 int dyad_mod_dtl_establish_connection(dyad_mod_dtl_t *dtl_handle);
 

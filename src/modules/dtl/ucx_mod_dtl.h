@@ -4,9 +4,10 @@
 #include "dyad_flux_log.h"
 #include <ucp/api/ucp.h>
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 #include <cstdlib>
 #else
+#include <stdbool.h>
 #include <stdlib.h>
 #endif
 
@@ -26,7 +27,7 @@ typedef struct dyad_mod_ucx_dtl dyad_mod_ucx_dtl_t;
 int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle);
 
 int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
-        flux_msg_t *packed_obj, char **upath);
+        const flux_msg_t *packed_obj, char **upath);
 
 int dyad_mod_ucx_dtl_establish_connection(dyad_mod_ucx_dtl_t *dtl_handle);
 
