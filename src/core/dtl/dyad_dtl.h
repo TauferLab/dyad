@@ -4,11 +4,13 @@
 #include "dyad_dtl_defs.h"
 #include "dyad_err.h"
 
+#include <flux/core.h>
 #include <jansson.h>
 
 #ifdef __cplusplus
 #include <cstdint>
 #else
+#include <stdbool.h>
 #include <stdint.h>
 #endif
 

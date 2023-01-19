@@ -40,12 +40,21 @@ static void dyad_ucx_request_init(void *request)
 
 // Define a function that ucp_tag_msg_recv_nbx will use
 // as a callback to signal the completion of the async receive
+#if UCP_API_VERSION >= UCP_VERSION(1, 9)
 static void dyad_recv_callback(void *request, ucs_status_t status,
         const ucp_tag_recv_info_t *tag_info, void *user_data)
 {
     dyad_ucx_request_t *real_request = (dyad_ucx_request_t*) request;
     real_request->completed = 1;
 }
+#else
+static void dyad_recv_callback(void *request, ucs_status_t status,
+        ucp_tag_recv_info_t *tag_info)
+{
+    dyad_ucx_request_t *real_request = (dyad_ucx_request_t*) request;
+    real_request->completed = 1;
+}
+#endif
 
 // Simple function used to wait on the async receive
 static ucs_status_t dyad_ucx_request_wait(dyad_dtl_ucx_t *dtl_handle, dyad_ucx_request_t *request)
@@ -97,7 +106,6 @@ dyad_core_err_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     (*dtl_handle)->kvs_namespace = kvs_namespace;
     (*dtl_handle)->ucx_ctx = NULL;
     (*dtl_handle)->ucx_worker = NULL;
-    (*dtl_handle)->curr_ep = NULL;
 
     ucp_params_t ucx_params;
     ucp_worker_params_t worker_params;
@@ -121,7 +129,7 @@ dyad_core_err_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     //   * Remote Memory Access communication
     //   * Auto initialization of request objects
     //   * Worker sleep, wakeup, poll, etc. features
-    ucx_params.field_mask = UCP_PARAMS_FIELD_FEATURES |
+    ucx_params.field_mask = UCP_PARAM_FIELD_FEATURES |
                             UCP_PARAM_FIELD_REQUEST_SIZE |
                             UCP_PARAM_FIELD_REQUEST_INIT;
     ucx_params.features = UCP_FEATURE_TAG |
@@ -218,7 +226,7 @@ dyad_core_err_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
     // The tag is a 64 bit unsigned integer consisting of the
     // 32-bit rank of the producer followed by the 32-bit rank
     // of the consumer
-    dtl_handle->comm_tag = (producer_rank << 32) | consumer_rank;
+    dtl_handle->comm_tag = ((uint64_t)producer_rank << 32) | (uint64_t)consumer_rank;
     return DYAD_OK;
 }
 
@@ -234,7 +242,10 @@ dyad_core_err_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *up
     // Add 1 to encoded length because the encoded buffer will be
     // packed as if it is a string
     char* enc_buf = malloc(enc_len+1);
-    ssize_t enc_size = base64_encode(enc_buf, enc_len+1, dtl_handle->consumer_address, dtl_handle->addr_len);
+    // consumer_address is casted to const char* to avoid warnings
+    // This is valid because it is a pointer to an opaque struct,
+    // so the cast can be treated like a void*->char* cast.
+    ssize_t enc_size = base64_encode(enc_buf, enc_len+1, (const char*)dtl_handle->consumer_address, dtl_handle->addr_len);
     if (enc_size < 0)
     {
         // TODO log error
@@ -318,6 +329,8 @@ dyad_core_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
         FLUX_LOG_ERR (dtl_handle->h, "Could not allocate memory for file\n");
         return DYAD_SYSFAIL;
     }
+    dyad_ucx_request_t* req;
+#if UCP_API_VERSION >= UCP_VERSION(1, 9)
     // Define the settings for the recv operation
     //
     // The settings enabled are:
@@ -334,13 +347,23 @@ dyad_core_err_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
     // allows UCX to potentially perform some optimizations
     recv_params.memory_type = UCS_MEMORY_TYPE_HOST;
     // Perform the async recv operation using the probed tag recv event
-    dyad_ucx_request_t* req = ucp_tag_msg_recv_nbx(
+    req = ucp_tag_msg_recv_nbx(
         dtl_handle->ucx_worker,
         *buf,
         *buflen,
         msg,
         &recv_params
     );
+#else
+    req = ucp_tag_msg_recv_nb(
+        dtl_handle->ucx_worker,
+        *buf,
+        *buflen,
+        UCP_DATATYPE_CONTIG,
+        msg,
+        dyad_recv_callback
+    );
+#endif
     // Wait on the recv operation to complete
     status = dyad_ucx_request_wait(dtl_handle, req);
     // If the recv operation failed, log an error, free the data buffer,
@@ -384,7 +407,10 @@ dyad_core_err_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
         // Release consumer address if not already released
         if (dtl_handle->consumer_address != NULL)
         {
-            ucp_worker_release_address(dtl_handle->consumer_address);
+            ucp_worker_release_address(
+                dtl_handle->ucx_worker,
+                dtl_handle->consumer_address
+            );
             dtl_handle->consumer_address = NULL;
         }
         // Release worker if not already released

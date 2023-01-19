@@ -12,6 +12,7 @@ libdyad_dtl_la_LIBADD = \
 libdyad_dtl_la_CPPFLAGS = \
     $(FLUX_CORE_CFLAGS) \
 	-I$(top_builddir)/src/core \
+    -I$(top_builddir)/src/utils \
 	$(UCX_CFLAGS)
 if PERFFLOW
 libdyad_dtl_la_LIBADD += $(PERFFLOW_LIBS)
@@ -20,5 +21,3 @@ libdyad_dtl_la_CPPFLAGS += \
 	$(PERFFLOW_CFLAGS) \
 	-DDYAD_PERFFLOW=1
 endif
-
-include_HEADERS = dyad_dtl_defs.h

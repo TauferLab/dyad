@@ -12,6 +12,7 @@
 
 const struct dyad_ctx dyad_ctx_default = {
     NULL,
+    NULL,
     false,
     false,
     false,
@@ -22,7 +23,9 @@ const struct dyad_ctx dyad_ctx_default = {
     1024u,
     0u,
     NULL,
-    NULL
+    NULL,
+    NULL,
+    false
 };
 
 int validate_context(dyad_ctx_t *ctx, bool check_cons, bool check_prod)
@@ -196,9 +199,6 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         FLUX_LOG_ERR ((*ctx)->h, "Could not get Flux rank!\n");
         return DYAD_FLUXFAIL;
     }
-<<<<<<< HEAD
-    printf("Initialization complete\n");
-=======
     dyad_core_err_t errcode = dyad_dtl_init(
         dtl_mode,
         (*ctx)->h,
@@ -211,10 +211,101 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         // TODO Indicate error
         return errcode;
     }
->>>>>>> 6b1e0b6 (Tweaks DYAD Core to use DTL functions)
     (*ctx)->initialized = true;
+    printf("Initialization complete\n");
     // TODO Print logging info
     return DYAD_OK;
+}
+
+int dyad_init_env(dyad_ctx_t **ctx)
+{
+    char *e = NULL;
+
+    bool debug = false;
+    bool check = false;
+    bool shared_storage = false;
+    unsigned int key_depth = 0;
+    unsigned int key_bins = 0;
+    char *kvs_namespace = NULL;
+    char *prod_managed_path = NULL;
+    char *cons_managed_path = NULL;
+    bool intercept = true;
+    dyad_dtl_mode_t dtl_mode = DYAD_DTL_UCX;
+
+    printf ("DYAD_WRAPPER: Initializeing DYAD wrapper\n");
+
+    printf("Reading evn vars\n");
+    if ((e = getenv ("DYAD_SYNC_DEBUG"))) {
+        debug = true;
+        enable_debug_dyad_utils ();
+    } else {
+        debug = false;
+        disable_debug_dyad_utils ();
+    }
+
+    if ((e = getenv ("DYAD_SYNC_CHECK")))
+        check = true;
+    else
+        check = false;
+
+    if ((e = getenv ("DYAD_SHARED_STORAGE")))
+        shared_storage = true;
+    else
+        shared_storage = false;
+
+    if ((e = getenv ("DYAD_KEY_DEPTH")))
+        key_depth = atoi (e);
+    else
+        key_depth = 3;
+
+    if ((e = getenv ("DYAD_KEY_BINS")))
+        key_bins = atoi (e);
+    else
+        key_bins = 1024;
+
+    if ((e = getenv ("FLUX_KVS_NAMESPACE")))
+        kvs_namespace = e;
+    else
+        kvs_namespace = NULL;
+
+    if ((e = getenv(DYAD_PATH_CONS_ENV)))
+    {
+        cons_managed_path = e;
+    }
+    else
+    {
+        cons_managed_path = NULL;
+    }
+    if ((e = getenv(DYAD_PATH_PROD_ENV)))
+    {
+        prod_managed_path = e;
+    }
+    else
+    {
+        prod_managed_path = NULL;
+    }
+
+    if ((e = getenv("DYAD_DTL_MODE")))
+    {
+        if (strncmp(e, "flux", 5) == 0 || strncmp(e, "FLUX", 5) == 0)
+        {
+            dtl_mode = DYAD_DTL_FLUX_RPC;
+        }
+        else if (strncmp(e, "ucx", 4) == 0 || strncmp(e, "UCX", 4) == 0)
+        {
+            dtl_mode = DYAD_DTL_UCX;
+        }
+        else
+        {
+            // TODO produce log/error message indicating invalid
+            // DTL mode
+        }
+    }
+
+    printf("Calling dyad_init\n");
+    return dyad_init(debug, check, shared_storage, key_depth,
+                     key_bins, kvs_namespace, prod_managed_path,
+                     cons_managed_path, intercept, dtl_mode, ctx);
 }
 
 int dyad_produce(dyad_ctx_t *ctx, const char *fname)
@@ -472,12 +563,13 @@ int dyad_get_data(dyad_ctx_t *ctx, dyad_kvs_response_t *kvs_data,
     json_t *rpc_payload;
     errcode = dyad_dtl_rpc_pack(
         ctx->dtl_handle,
-        kvs_data->fpath
+        kvs_data->fpath,
         &rpc_payload
     );
     if (DYAD_IS_ERROR(errcode))
     {
         // TODO log error
+        dyad_dtl_close_connection(ctx->dtl_handle);
         return errcode;
     }
     f = flux_rpc_pack(ctx->h,
@@ -490,6 +582,7 @@ int dyad_get_data(dyad_ctx_t *ctx, dyad_kvs_response_t *kvs_data,
     if (f == NULL)
     {
         DYAD_LOG_ERR(ctx, "Cannot send RPC to producer plugin!\n");
+        dyad_dtl_close_connection(ctx->dtl_handle);
         return DYAD_BADRPC;
     }
     errcode = dyad_dtl_recv(
@@ -498,22 +591,12 @@ int dyad_get_data(dyad_ctx_t *ctx, dyad_kvs_response_t *kvs_data,
         file_data,
         file_len
     );
+    dyad_dtl_close_connection(ctx->dtl_handle);
     if (DYAD_IS_ERROR(errcode))
     {
-<<<<<<< HEAD
-        flux_future_destroy(f);
-        f = NULL;
-    }
-    if (rc < 0)
-    {
-        DYAD_LOG_ERR(ctx, "Cannot get file back from plugin via RPC!\n");
-        return DYAD_BADRPC;
-=======
         // TODO log error
         return errcode;
->>>>>>> 6b1e0b6 (Tweaks DYAD Core to use DTL functions)
     }
-    dyad_dtl_close_connection(ctx->dtl_handle);
     return DYAD_OK;
 }
 
@@ -530,20 +613,14 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
         fprintf (stderr, "DYAD context not provided to dyad_pull\n");
         return DYAD_NOCTX;
     }
-<<<<<<< HEAD
-    const char *file_data = NULL;
-    int file_len = 0;
-=======
-    dyad_core_err_t rc;
-    void *file_data = NULL;
+    char *file_data = NULL;
     size_t file_len = 0;
->>>>>>> 6b1e0b6 (Tweaks DYAD Core to use DTL functions)
     const char *odir = NULL;
     FILE *of = NULL;
     char file_path [PATH_MAX+1] = {'\0'};
     char file_path_copy [PATH_MAX+1] = {'\0'};
 
-    rc = dyad_rpc_get(ctx, kvs_data, &file_data, &file_len);
+    rc = dyad_get_data(ctx, kvs_data, (void**)&file_data, &file_len);
     if (DYAD_IS_ERROR(rc))
     {
         goto pull_done;
@@ -566,7 +643,7 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
         goto pull_done;
     }
 
-    of = fopen(ctx, file_path, "w");
+    of = fopen(file_path, "w");
     if (of == NULL)
     {
         DYAD_LOG_ERR(ctx, "Cannot open file %s\n", file_path);
@@ -580,7 +657,7 @@ int dyad_pull(dyad_ctx_t *ctx, const char* fname,
         rc = DYAD_BADFIO;
         goto pull_done;
     }
-    rc = dyad_fclose(ctx, of);
+    rc = fclose(of);
 
     if (rc != 0)
     {
@@ -614,7 +691,7 @@ int dyad_finalize(dyad_ctx_t *ctx)
     {
         return 0;
     }
-<<<<<<< HEAD
+    dyad_dtl_finalize(ctx->dtl_handle);
     if (ctx->h != NULL)
     {
         flux_close(ctx->h);
@@ -635,13 +712,6 @@ int dyad_finalize(dyad_ctx_t *ctx)
         free(ctx->cons_managed_path);
         ctx->cons_managed_path = NULL;
     }
-=======
-    dyad_dtl_finalize(ctx->dtl_handle);
-    flux_close(ctx->h);
-    free(ctx->kvs_namespace);
-    free(ctx->prod_managed_path);
-    free(ctx->cons_managed_path);
->>>>>>> 6b1e0b6 (Tweaks DYAD Core to use DTL functions)
     free(ctx);
     ctx = NULL;
     return 0;

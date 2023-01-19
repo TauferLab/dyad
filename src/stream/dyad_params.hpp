@@ -33,6 +33,10 @@ struct dyad_params {
     /// The path managed by DYAD for producer
     std::string m_prod_managed_path;
 
+    // The mode for data transfer
+    // See dyad_dtl_defs.h for more info
+    int m_dtl_mode;
+
     dyad_params ()
     : m_debug(false)
     , m_shared_storage(false)
@@ -41,6 +45,7 @@ struct dyad_params {
     , m_kvs_namespace("")
     , m_cons_managed_path("")
     , m_prod_managed_path("")
+    , m_dtl_mode(1) // DYAD_DTL_UCX
     {}
 };
 

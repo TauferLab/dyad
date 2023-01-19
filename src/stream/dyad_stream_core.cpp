@@ -69,72 +69,7 @@ void dyad_stream_core::set_mode(std::ios_base::openmode mode)
 
 void dyad_stream_core::init ()
 {
-    char *e = NULL;
-
-    bool debug = false;
-    bool check = false;
-    bool shared_storage = false;
-    unsigned int key_depth = 0;
-    unsigned int key_bins = 0;
-    const char *kvs_namespace = NULL;
-    const char *cons_managed_path = NULL;
-    const char *prod_managed_path = NULL;
-    bool intercept = false;
-
-    DPRINTF (m_ctx, "DYAD_WRAPPER: Initializeing DYAD wrapper\n");
-
-    if ((e = getenv ("DYAD_SYNC_DEBUG")) && (atoi (e) != 0)) {
-        debug = true;
-        enable_debug_dyad_utils ();
-    } else {
-        debug = false;
-        disable_debug_dyad_utils ();
-    }
-
-    if ((e = getenv ("DYAD_SHARED_STORAGE")) && (atoi (e) != 0))
-        shared_storage = true;
-    else
-        shared_storage = false;
-
-    if ((e = getenv ("DYAD_KEY_DEPTH")))
-        key_depth = atoi (e);
-    else
-        key_depth = 2;
-
-    if ((e = getenv ("DYAD_KEY_BINS")))
-        key_bins = atoi (e);
-    else
-        key_bins = 256;
-
-    if ((e = getenv ("FLUX_KVS_NAMESPACE")))
-    {
-        kvs_namespace = e;
-    }
-    else
-    {
-        kvs_namespace = NULL;
-    }
-
-    if ((e = getenv (DYAD_PATH_CONS_ENV)))
-    {
-        cons_managed_path = e;
-    }
-    else
-    {
-        cons_managed_path = NULL;
-    }
-    if ((e = getenv (DYAD_PATH_PROD_ENV)))
-    {
-        prod_managed_path = e;
-    }
-    else
-    {
-        prod_managed_path = NULL;
-    }
-
-    int rc = dyad_init(debug, check, shared_storage, key_depth,
-            key_bins, kvs_namespace, prod_managed_path,
-            cons_managed_path, intercept, &m_ctx);
+    int rc = dyad_init_env(&m_ctx);
 
     // TODO figure out if we want to error if init fails
     m_initialized = true;
@@ -147,7 +82,7 @@ void dyad_stream_core::init (const dyad_params& p)
     int rc = dyad_init(p.m_debug, false, p.m_shared_storage,
             p.m_key_depth, p.m_key_bins, p.m_kvs_namespace.c_str(),
             p.m_prod_managed_path.c_str(), p.m_cons_managed_path.c_str(),
-            false, &m_ctx);
+            false, (dyad_dtl_mode_t)p.m_dtl_mode, &m_ctx);
     // TODO figure out if we want to error if init fails
     m_initialized = true;
     log_info ("Stream core is initialized by parameters");

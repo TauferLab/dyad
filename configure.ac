@@ -94,9 +94,7 @@ AC_ARG_ENABLE([perfflow],
 AC_CHECK_LIB([dl], [dlsym])
 # Check for UCX v1.6.0 or higher (Required)
 PKG_CHECK_MODULES([UCX],
-    [ucx >= 1.6.0],
-    [],
-    []
+    [ucx >= 1.6.0]
 )
 # Check for flux-core (Required)
 AX_FLUX_CORE
@@ -227,8 +225,10 @@ AC_CONFIG_FILES([Makefile
                  src/utils/Makefile
                  src/utils/libtap/Makefile
                  src/core/Makefile
+                 src/core/dtl/Makefile
                  src/stream/Makefile
                  src/modules/Makefile
+                 src/modules/dtl/Makefile
                  src/wrapper/Makefile])
 
 #####################

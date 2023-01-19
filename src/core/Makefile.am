@@ -22,4 +22,4 @@ libdyad_core_la_CPPFLAGS += \
 	-DDYAD_PERFFLOW=1
 endif
 
-include_HEADERS = dyad_core.h dyad_err.h dyad_flux_log.h
+include_HEADERS = dyad_core.h dyad_err.h dyad_flux_log.h dyad_dtl_defs.h

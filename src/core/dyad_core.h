@@ -104,6 +104,13 @@ int dyad_init(bool debug, bool check, bool shared_storage,
         dyad_dtl_mode_t dtl_mode, dyad_ctx_t **ctx);
 
 /**
+ * @brief Initialize the DYAD context using environment variables
+ * @param[out] ctx the newly initialized context
+ * @return An integer error code
+ */
+int dyad_init_env(dyad_ctx_t **ctx);
+
+/**
  * @brief Wrapper function that performs all the common tasks needed
  *        of a producer
  * @param[in] ctx    the DYAD context for the operation
