@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     {
         memset(val_buf, 0, VAL_BUF_SIZE);
         full_path = cpp_fpath + "/data" + std::to_string(seed) + ".txt";
-        dyad::ifstream ifs_dyad;
+        dyad::ifstream_dyad ifs_dyad;
         try
         {
             ifs_dyad.open(full_path, std::ifstream::in | std::ios::binary);

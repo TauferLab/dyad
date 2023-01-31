@@ -1,3 +1,6 @@
+#ifndef __GENERATION_H__
+#define __GENERATION_H__
+
 #ifdef __cplusplus
 #include <cstdint>
 #include <cstdlib>
@@ -47,3 +50,5 @@ bool vals_are_valid(int32_t seed, int32_t* val_buf)
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* __GENERATION_H__ */
