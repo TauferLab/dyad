@@ -1,34 +1,58 @@
-#include "generation.h"
-#include <stdio.h>
+#include "generation.h" /* Defines the following:
+                         *  - parse_cmd_line
+                         *  - ALLOC_VAL_BUF
+                         *  - vals_are_valid
+                         *  - VAL_BUF_SIZE
+                         *  - NUM_VALS
+                         */
 #include <string.h>
-#include <sys/stat.h>
+
+/**
+ * Transfer the specified file with DYAD and read it
+ *
+ * @param[in] full_path Path to the file to read
+ * @param[in] seed      The "seed value" (i.e., number from the for-loop in main)
+ *                      for the file
+ * @param[out] val_buf  Array in which to store the contents of the file
+ *
+ * @return 0 if no errors occured. -1 otherwise.
+ */
+int consume_file(char* full_path, int32_t seed, int32_t* val_buf)
+{
+    // Open the file or abort if not possible
+    FILE* fp = fopen(full_path, "r");
+    // Print an error if the file couldn't be opened
+    if (fp == NULL)
+    {
+        fprintf(stderr, "Cannot open file: %s\n", full_path);
+        printf("File %ld: Cannot open\n", (long) seed);
+        return -1;
+    }
+    // Read the file or abort if not possible
+    size_t items_read = fread(val_buf, sizeof(int32_t), NUM_VALS, fp);
+    fclose(fp);
+    // Print an error if the number of items read is not what was expected
+    if (items_read != NUM_VALS)
+    {
+        fprintf(stderr, "Could not read the full file (%s)\n", full_path);
+        printf("File %ld: Cannot read\n", (long) seed);
+        return -1;
+    }
+    return 0;
+}
 
 int main(int argc, char** argv)
 {
-    // Print an error and abort if an invalid number of arguments
-    // were provided
-    if (argc != 3)
+    // Parse command-line arguments
+    int32_t num_transfers;
+    char* fpath;
+    int rc = parse_cmd_line(argc, argv, &num_transfers, &fpath);
+    // If an error occured during command-line parsing,
+    // abort the consumer
+    if (rc != 0)
     {
-        fprintf(stderr, "Usage: ./c_cons <# of Files Transferred> <Consumer Directory>\n");
-        return -1;
+        return rc;
     }
-    // Ensure a valid number of file transfers were provided
-    int32_t num_transfers = (int32_t) atol(argv[1]);
-    if (num_transfers <= 0)
-    {
-        fprintf(stderr, "Either an invalid number of transfers was provided, \
-                or an error occured in parsing the argument!\n");
-        return -1;
-    }
-    // Get the Consumer Directory from command line and
-    // make sure the directory exists
-    char* fpath = argv[2];
-    struct stat finfo;
-    if (stat(fpath, &finfo) != 0 || !S_ISDIR(finfo.st_mode))
-    {
-        fprintf(stderr, "The provided directory (%s) does not exist!\n", fpath);
-        return -1;
-   }
     // Largest number of digits for a int32_t when converted to string
     const size_t max_digits = 10;
     // First 4 is for "data"
@@ -39,7 +63,6 @@ int main(int argc, char** argv)
     // Allocate a buffer for the data read from the file
     int32_t* val_buf = ALLOC_VAL_BUF();
     int num_chars;
-    size_t items_read;
     for (int32_t seed = 0; seed < num_transfers; seed++)
     {
         // Clear full_path and val_buf to be safe
@@ -55,21 +78,12 @@ int main(int argc, char** argv)
             printf("File %ld: Bad Name\n", (long) seed);
             continue;
         }
-        // Open the file or abort if not possible
-        FILE* fp = fopen(full_path, "r");
-        if (fp == NULL)
+        /********************************************
+         *       Perform DYAD Data Transfer!!!      *
+         ********************************************/
+        rc = consume_file(full_path, seed, val_buf);
+        if (rc != 0)
         {
-            fprintf(stderr, "Cannot open file: %s\n", full_path);
-            printf("File %ld: Cannot open\n", (long) seed);
-            continue;
-        }
-        // Read the file or abort if not possible
-        items_read = fread(val_buf, sizeof(int32_t), VAL_BUF_SIZE, fp);
-        fclose(fp);
-        if (items_read != NUM_VALS)
-        {
-            fprintf(stderr, "Could not read the full file (%s)\n", full_path);
-            printf("File %ld: Cannot read\n", (long) seed);
             continue;
         }
         // Validate the content of the file
