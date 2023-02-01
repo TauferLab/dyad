@@ -6,7 +6,7 @@ DYAD_INCLUDE_PATH = $(DYAD_INSTALL_PREFIX)/include
 CFLAGS_LOC = -std=c99 $(CFLAGS)
 CPPFLAGS_LOC = -O3 -I. $(CPPFLAGS)
 CXXFLAGS_LOC = -std=c++11 -I$(DYAD_INCLUDE_PATH) $(CXXFLAGS)
-CXXLIBS_LOC = -L$(DYAD_LIB_PATH) -static -ldyad_fstream $(CXXLIBS)
+CXXLIBS_LOC = -L$(DYAD_LIB_PATH) -Wl,-rpath=$(DYAD_LIB_PATH) -ldyad_fstream $(CXXLIBS)
 
 all: c_prod c_cons cpp_prod cpp_cons
 
