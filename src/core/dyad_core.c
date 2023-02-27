@@ -296,6 +296,13 @@ static inline dyad_rc_t dyad_fetch (const dyad_ctx_t* restrict ctx,
         goto fetch_done;
     }
     (*resp)->fpath = malloc (strlen (upath) + 1);
+    if ((*resp)->fpath == NULL)
+    {
+        DYAD_LOG_ERR (ctx, "Cannot allocate a buffer for the file path in the dyad_kvs_response_t object\n");
+        free(*resp);
+        rc = DYAD_RC_BADRESPONSE;
+        goto fetch_done;
+    }
     strncpy ((*resp)->fpath, upath, strlen (upath) + 1);
     (*resp)->owner_rank = owner_rank;
     rc = DYAD_RC_OK;
