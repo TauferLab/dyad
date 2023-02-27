@@ -214,26 +214,6 @@ error:;
     return DYAD_RC_UCXINIT_FAIL;
 }
 
-dyad_rc_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
-        uint32_t producer_rank)
-{
-    // Because we're using tag-matching send/recv for communication,
-    // there's no need to do any real connection establishment here.
-    // Instead, we use this function to create the tag that will be
-    // used for the upcoming communication.
-    uint32_t consumer_rank = 0;
-    if (flux_get_rank(dtl_handle->h, &consumer_rank) < 0)
-    {
-        FLUX_LOG_ERR (dtl_handle->h, "Cannot get consumer rank\n");
-        return DYAD_RC_FLUXFAIL;
-    }
-    // The tag is a 64 bit unsigned integer consisting of the
-    // 32-bit rank of the producer followed by the 32-bit rank
-    // of the consumer
-    dtl_handle->comm_tag = ((uint64_t)producer_rank << 32) | (uint64_t)consumer_rank;
-    return DYAD_RC_OK;
-}
-
 dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
         json_t **packed_obj)
 {
@@ -285,7 +265,33 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
     return DYAD_RC_OK;
 }
 
-dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle, flux_future_t *f,
+dyad_rc_t dyad_dtl_ucx_recv_rpc_response(dyad_dtl_ucx_t *dtl_handle,
+        flux_future_t *f)
+{
+    return DYAD_RC_OK;
+}
+
+dyad_rc_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
+        uint32_t producer_rank)
+{
+    // Because we're using tag-matching send/recv for communication,
+    // there's no need to do any real connection establishment here.
+    // Instead, we use this function to create the tag that will be
+    // used for the upcoming communication.
+    uint32_t consumer_rank = 0;
+    if (flux_get_rank(dtl_handle->h, &consumer_rank) < 0)
+    {
+        FLUX_LOG_ERR (dtl_handle->h, "Cannot get consumer rank\n");
+        return DYAD_RC_FLUXFAIL;
+    }
+    // The tag is a 64 bit unsigned integer consisting of the
+    // 32-bit rank of the producer followed by the 32-bit rank
+    // of the consumer
+    dtl_handle->comm_tag = ((uint64_t)producer_rank << 32) | (uint64_t)consumer_rank;
+    return DYAD_RC_OK;
+}
+
+dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
         void **buf, size_t *buflen)
 {
     ucs_status_t status;

@@ -28,14 +28,17 @@ typedef struct dyad_dtl_ucx dyad_dtl_ucx_t;
 dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
         bool debug, dyad_dtl_ucx_t **dtl_handle);
 
-dyad_rc_t dyad_dtl_ucx_establish_connection(
-        dyad_dtl_ucx_t *dtl_handle, uint32_t producer_rank);
-
 dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle,
         const char *upath, json_t **packed_obj);
 
+dyad_rc_t dyad_dtl_ucx_recv_rpc_response(dyad_dtl_ucx_t *dtl_handle,
+        flux_future_t *f);
+
+dyad_rc_t dyad_dtl_ucx_establish_connection(
+        dyad_dtl_ucx_t *dtl_handle, uint32_t producer_rank);
+
 dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
-        flux_future_t *f, void **buf, size_t *buflen);
+        void **buf, size_t *buflen);
 
 dyad_rc_t dyad_dtl_ucx_close_connection(
         dyad_dtl_ucx_t *dtl_handle);

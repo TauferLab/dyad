@@ -3,6 +3,8 @@
 
 #include "dyad_core.h"
 #include "dtl/dyad_dtl.h"
+#include "dyad_flux_log.h"
+#include "dyad_rc.h"
 #include "murmur3.h"
 #include "utils.h"
 
@@ -334,14 +336,6 @@ static inline dyad_rc_t dyad_get_data (
 {
     dyad_rc_t rc = DYAD_RC_OK;
     json_t* rpc_payload;
-    rc = dyad_dtl_establish_connection (
-        ctx->dtl_handle,
-        kvs_data->owner_rank
-    );
-    if (DYAD_IS_ERROR(rc)) {
-        DYAD_LOG_ERR (ctx, "Cannot establish connection with DYAD module on broker %u\n", kvs_data->owner_rank);
-        return rc;
-    }
     rc = dyad_dtl_rpc_pack (
         ctx->dtl_handle,
         kvs_data->fpath,
@@ -350,7 +344,7 @@ static inline dyad_rc_t dyad_get_data (
     if (DYAD_IS_ERROR(rc))
     {
         DYAD_LOG_ERR(ctx, "Cannot create JSON payload for Flux RPC to DYAD module\n");
-        goto get_data_done;
+        return rc;
     }
     *f = flux_rpc_pack (
         ctx->h,
@@ -363,8 +357,21 @@ static inline dyad_rc_t dyad_get_data (
     if (*f == NULL)
     {
         DYAD_LOG_ERR(ctx, "Cannot send RPC to producer module\n");
-        rc = DYAD_RC_BADRPC;
-        goto get_data_done;
+        return DYAD_RC_BADRPC;
+    }
+    rc = dyad_dtl_recv_rpc_response(ctx->dtl_handle, f);
+    if (DYAD_IS_ERROR(rc))
+    {
+        DYAD_LOG_ERR(ctx, "Cannot receive and/or parse the RPC response\n");
+        return rc;
+    }
+    rc = dyad_dtl_establish_connection (
+        ctx->dtl_handle,
+        kvs_data->owner_rank
+    );
+    if (DYAD_IS_ERROR(rc)) {
+        DYAD_LOG_ERR (ctx, "Cannot establish connection with DYAD module on broker %u\n", kvs_data->owner_rank);
+        return rc;
     }
     rc = dyad_dtl_recv (
         ctx->dtl_handle,
@@ -372,16 +379,13 @@ static inline dyad_rc_t dyad_get_data (
         file_data,
         file_len
     );
+    dyad_dtl_close_connection (ctx->dtl_handle);
     if (DYAD_IS_ERROR(rc))
     {
         DYAD_LOG_ERR (ctx, "Cannot receive data from producer module\n");
-        goto get_data_done;
+        return rc;
     }
-    rc = DYAD_RC_OK;
-
-get_data_done:;
-    dyad_dtl_close_connection (ctx->dtl_handle);
-    return rc;
+    return DYAD_RC_OK;
 }
 
 #if DYAD_PERFFLOW
