@@ -2,7 +2,10 @@
 #include <unistd.h>
 
 #include "dyad_core.h"
+#include "dyad_dtl_defs.h"
 #include "dyad_flux_log.h"
+#include "dyad_rc.h"
+#include "dtl/dyad_dtl.h"
 #include "murmur3.h"
 #include "utils.h"
 
@@ -16,6 +19,7 @@
 
 const struct dyad_ctx dyad_ctx_default = {
     NULL,   // h
+    NULL,   // dtl_handle
     false,  // debug
     false,  // check
     false,  // reenter
@@ -104,12 +108,10 @@ static inline dyad_rc_t publish_via_flux (const dyad_ctx_t* restrict ctx,
 #endif
 {
     dyad_rc_t rc = DYAD_RC_OK;
-    const char* prod_managed_path = NULL;
     flux_kvs_txn_t* txn = NULL;
     const size_t topic_len = PATH_MAX;
     char topic[PATH_MAX + 1];
     memset (topic, 0, topic_len + 1);
-    prod_managed_path = ctx->prod_managed_path;
     memset (topic, '\0', topic_len + 1);
     // Generate the KVS key from the file path relative to
     // the producer-managed directory
@@ -296,6 +298,13 @@ static inline dyad_rc_t dyad_fetch (const dyad_ctx_t* restrict ctx,
         goto fetch_done;
     }
     (*resp)->fpath = malloc (strlen (upath) + 1);
+    if ((*resp)->fpath == NULL)
+    {
+        DYAD_LOG_ERR (ctx, "Cannot allocate a buffer for the file path in the dyad_kvs_response_t object\n");
+        free(*resp);
+        rc = DYAD_RC_BADRESPONSE;
+        goto fetch_done;
+    }
     strncpy ((*resp)->fpath, upath, strlen (upath) + 1);
     (*resp)->owner_rank = owner_rank;
     rc = DYAD_RC_OK;
@@ -308,75 +317,151 @@ fetch_done:;
     return rc;
 }
 
+// static inline dyad_rc_t process_remaining_rpc_msgs (const dyad_ctx_t* ctx, flux_future_t* f)
+// {
+//     DYAD_LOG_INFO (ctx, "In process_remaining_rpc_msgs\n");
+//     int rc = 0;
+//     while (true) {
+//         if ((rc = flux_rpc_get (f, NULL)) < 0) {
+//             DYAD_LOG_INFO(ctx, "flux_rpc_get returned < 0 (rc = %d)\n", rc);
+//             if (errno == ENODATA) {
+//                 DYAD_LOG_INFO (ctx, "Reached end of RPC stream from module");
+//                 return DYAD_RC_OK;
+//             } else {
+//                 DYAD_LOG_ERR (ctx, "An error occured in the DYAD module\n");
+//                 return DYAD_RC_BADRPC;
+//             }
+//         }
+//         DYAD_LOG_INFO(ctx, "flux_rpc_get returned >= 0 (rc = %d)\n", rc);
+//         flux_future_reset (f);
+//     }
+// }
+
 #if DYAD_PERFFLOW
 __attribute__ ((annotate ("@critical_path()")))
-static dyad_rc_t dyad_rpc_get (
+static dyad_rc_t dyad_get_data (
     const dyad_ctx_t* ctx,
     const dyad_kvs_response_t* restrict kvs_data,
     const char** file_data,
-    int* file_len,
-    flux_future_t** f)
+    size_t* file_len)
 #else
-static inline dyad_rc_t dyad_rpc_get (
+static inline dyad_rc_t dyad_get_data (
     const dyad_ctx_t* ctx,
     const dyad_kvs_response_t* restrict kvs_data,
     const char** file_data,
-    int* file_len,
-    flux_future_t** f)
+    size_t* file_len)
 #endif
 {
     dyad_rc_t rc = DYAD_RC_OK;
-    // Create and send an RPC payload to the producer's Flux broker.
-    // This payload will tell the broker to run the dyad.fetch function
-    // with the upath specified by the data fetched from the KVS
-    DYAD_LOG_INFO (ctx, "Sending RPC for data for %s from rank %u\n",
-                   kvs_data->fpath, kvs_data->owner_rank);
-    *f = flux_rpc_pack (ctx->h, "dyad.fetch", kvs_data->owner_rank, 0, "{s:s}",
-                        "upath", kvs_data->fpath);
-    // If the RPC dispatch failed, log an error and return DYAD_BADRPC
-    if (*f == NULL) {
-        DYAD_LOG_ERR (ctx, "Cannot send RPC to producer plugin!\n");
-        return DYAD_RC_BADRPC;
+    dyad_rc_t final_rc = DYAD_RC_OK;
+    flux_future_t *f;
+    json_t* rpc_payload;
+    DYAD_LOG_INFO (ctx, "Packing payload for RPC to DYAD module");
+    rc = dyad_dtl_rpc_pack (
+        ctx->dtl_handle,
+        kvs_data->fpath,
+        kvs_data->owner_rank,
+        &rpc_payload
+    );
+    if (DYAD_IS_ERROR(rc))
+    {
+        DYAD_LOG_ERR(ctx, "Cannot create JSON payload for Flux RPC to DYAD module\n");
+        goto get_done;
     }
-    DYAD_LOG_INFO (ctx, "Retrieving data from producer\n");
-    // Extract the file data from the RPC response
-    rc = flux_rpc_get_raw (*f, (const void**)file_data, file_len);
-    // If the extraction failed, log an error and return DYAD_BADRPC
-    if (rc < 0) {
-        DYAD_LOG_ERR (ctx, "Cannot get file back from plugin via RPC!\n");
-        return DYAD_RC_BADRPC;
+    DYAD_LOG_INFO (ctx, "Sending payload for RPC to DYAD module");
+    f = flux_rpc_pack (
+        ctx->h,
+        "dyad.fetch",
+        kvs_data->owner_rank,
+        FLUX_RPC_STREAMING,
+        "o",
+        rpc_payload
+    );
+    if (f == NULL)
+    {
+        DYAD_LOG_ERR(ctx, "Cannot send RPC to producer module\n");
+        rc = DYAD_RC_BADRPC;
+        goto get_done;
     }
-    return DYAD_RC_OK;
+    DYAD_LOG_INFO (ctx, "Receive RPC response from DYAD module");
+    rc = dyad_dtl_recv_rpc_response(ctx->dtl_handle, f);
+    if (DYAD_IS_ERROR(rc))
+    {
+        DYAD_LOG_ERR(ctx, "Cannot receive and/or parse the RPC response\n");
+        goto get_done;
+    }
+    DYAD_LOG_INFO (ctx, "Establish DTL connection with DYAD module");
+    rc = dyad_dtl_establish_connection (
+        ctx->dtl_handle
+    );
+    if (DYAD_IS_ERROR(rc)) {
+        DYAD_LOG_ERR (ctx, "Cannot establish connection with DYAD module on broker %u\n", kvs_data->owner_rank);
+        goto get_done;
+    }
+    DYAD_LOG_INFO (ctx, "Receive file data via DTL");
+    rc = dyad_dtl_recv (
+        ctx->dtl_handle,
+        (void**) file_data,
+        file_len
+    );
+    DYAD_LOG_INFO (ctx, "Close DTL connection with DYAD module");
+    dyad_dtl_close_connection (ctx->dtl_handle);
+    if (DYAD_IS_ERROR(rc))
+    {
+        DYAD_LOG_ERR (ctx, "Cannot receive data from producer module\n");
+        goto get_done;
+    }
+
+    rc = DYAD_RC_OK;
+
+get_done:;
+    // There are two return codes that have special meaning when coming from the DTL:
+    //  * DYAD_RC_RPC_FINISHED: occurs when an ENODATA error occurs
+    //  * DYAD_RC_BADRPC: occurs when a previous RPC operation fails
+    // In either of these cases, we do not need to wait for the end of stream because
+    // the RPC is already completely messed up.
+    // If we do not have either of these cases, we will wait for one more RPC message.
+    // If everything went well in the module, this last message will set errno to ENODATA (i.e., end of stream).
+    // Otherwise, something went wrong, so we'll return DYAD_RC_BADRPC.
+    if (rc != DYAD_RC_RPC_FINISHED && rc != DYAD_RC_BADRPC) {
+        DYAD_LOG_INFO (ctx, "Wait for end-of-stream message from module\n");
+        if (flux_rpc_get (f, NULL) < 0 && errno == ENODATA) {
+            DYAD_LOG_ERR (ctx, "Received end-of-stream message (ENODATA) from module\n");
+        } else {
+            DYAD_LOG_ERR (ctx, "An error occured at end of getting data! Either the module sent too many responses, or the module failed with a bad error (errno = %d)\n", errno);
+            rc = DYAD_RC_BADRPC;
+        }
+    }
+    DYAD_LOG_INFO (ctx, "Destroy the Flux future for the RPC\n");
+    flux_future_destroy (f);
+    return rc;
 }
 
 #if DYAD_PERFFLOW
 __attribute__ ((annotate ("@critical_path()")))
 static dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
-                            const char* restrict fname,
                             const dyad_kvs_response_t* restrict kvs_data)
 #else
 static inline dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
-                                   const char* restrict fname,
                                    const dyad_kvs_response_t* restrict kvs_data)
 #endif
 {
     dyad_rc_t rc = DYAD_RC_OK;
     const char* file_data = NULL;
-    int file_len = 0;
+    size_t file_len = 0;
     const char* odir = NULL;
     FILE* of = NULL;
     char file_path[PATH_MAX + 1];
     char file_path_copy[PATH_MAX + 1];
     mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     size_t written_len = 0;
-    flux_future_t* f = NULL;
     memset (file_path, 0, PATH_MAX + 1);
     memset (file_path_copy, 0, PATH_MAX + 1);
 
-    // Call dyad_rpc_get to dispatch a RPC to the producer's Flux broker
+    // Call dyad_get_data to dispatch a RPC to the producer's Flux broker
     // and retrieve the data associated with the file
-    rc = dyad_rpc_get (ctx, kvs_data, &file_data, &file_len, &f);
-    if (rc != DYAD_RC_OK) {
+    rc = dyad_get_data (ctx, kvs_data, &file_data, &file_len);
+    if (DYAD_IS_ERROR(rc)) {
         goto pull_done;
     }
 
@@ -421,9 +506,8 @@ static inline dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
 
 pull_done:
     // Destroy the Flux future for the RPC, if needed
-    if (f != NULL) {
-        flux_future_destroy (f);
-        f = NULL;
+    if (file_data != NULL) {
+        free(file_data);
     }
     // If "check" is set and the operation was successful, set the
     // DYAD_CHECK_ENV environment variable to "ok"
@@ -440,8 +524,10 @@ dyad_rc_t dyad_init (bool debug,
                      const char* kvs_namespace,
                      const char* prod_managed_path,
                      const char* cons_managed_path,
+                     dyad_dtl_mode_t dtl_mode,
                      dyad_ctx_t** ctx)
 {
+    dyad_rc_t rc = DYAD_RC_OK;
     // If ctx is NULL, we won't be able to return a dyad_ctx_t
     // to the user. In that case, print an error and return
     // immediately with DYAD_NOCTX.
@@ -518,6 +604,20 @@ dyad_rc_t dyad_init (bool debug,
         return DYAD_RC_NOCTX;
     }
     strncpy ((*ctx)->kvs_namespace, kvs_namespace, namespace_len + 1);
+    // Initialize the DTL based on the value of dtl_mode
+    // If an error occurs, log it and return an error
+    rc = dyad_dtl_init(
+        dtl_mode,
+        (*ctx)->h,
+        (*ctx)->kvs_namespace,
+        (*ctx)->debug,
+        &(*ctx)->dtl_handle
+    );
+    if (DYAD_IS_ERROR(rc))
+    {
+        FLUX_LOG_ERR ((*ctx)->h, "Cannot initialize the DTL\n");
+        return rc;
+    }
     // If the producer-managed path is provided, copy it into
     // the dyad_ctx_t object
     if (prod_managed_path == NULL) {
@@ -563,6 +663,91 @@ dyad_rc_t dyad_init (bool debug,
     (*ctx)->initialized = true;
     // TODO Print logging info
     return DYAD_RC_OK;
+}
+
+dyad_rc_t dyad_init_env (dyad_ctx_t **ctx)
+{
+    char *e = NULL;
+    bool debug = false;
+    bool check = false;
+    bool shared_storage = false;
+    unsigned int key_depth = 0;
+    unsigned int key_bins = 0;
+    char *kvs_namespace = NULL;
+    char *prod_managed_path = NULL;
+    char *cons_managed_path = NULL;
+    size_t dtl_mode_env_len = 0;
+    dyad_dtl_mode_t dtl_mode = DYAD_DTL_FLUX_RPC;
+
+    printf("DYAD_CORE: Initializing with environment varialbes\n");
+
+    if ((e = getenv (DYAD_SYNC_DEBUG_ENV))) {
+        debug = true;
+        enable_debug_dyad_utils ();
+    } else {
+        debug = false;
+        disable_debug_dyad_utils ();
+    }
+
+    if ((e = getenv (DYAD_SYNC_CHECK_ENV))) {
+        check = true;
+    } else {
+        check = false;
+    }
+
+    if ((e = getenv (DYAD_SHARED_STORAGE_ENV))) {
+        shared_storage = true;
+    } else {
+        shared_storage = false;
+    }
+
+    if ((e = getenv (DYAD_KEY_DEPTH_ENV))) {
+        key_depth = atoi (e);
+    } else {
+        key_depth = 3;
+    }
+
+    if ((e = getenv (DYAD_KEY_BINS_ENV))) {
+        key_bins = atoi (e);
+    } else {
+        key_bins = 1024;
+    }
+
+    if ((e = getenv (DYAD_KVS_NAMESPACE_ENV))) {
+        kvs_namespace = e;
+    } else {
+        kvs_namespace = NULL;
+    }
+
+    if ((e = getenv (DYAD_PATH_CONSUMER_ENV))) {
+        cons_managed_path = e;
+    } else {
+        cons_managed_path = NULL;
+    }
+
+    if ((e = getenv (DYAD_PATH_PRODUCER_ENV))) {
+        prod_managed_path = e;
+    } else {
+        prod_managed_path = NULL;
+    }
+
+    if ((e = getenv (DYAD_DTL_MODE_ENV))) {
+        dtl_mode_env_len = strlen (e);
+        if (strncmp (e, "FLUX_RPC", dtl_mode_env_len) == 0) {
+            dtl_mode = DYAD_DTL_FLUX_RPC;
+        } else if (strncmp (e, "UCX", dtl_mode_env_len) == 0) {
+            dtl_mode = DYAD_DTL_UCX;
+        } else {
+            printf ("Invalid DTL mode provided through %s. \
+                    Defaulting the FLUX_RPC\n", DYAD_DTL_MODE_ENV);
+            dtl_mode = DYAD_DTL_FLUX_RPC;
+        }
+    } else {
+        dtl_mode = DYAD_DTL_FLUX_RPC;
+    }
+    return dyad_init (debug, check, shared_storage, key_depth, key_bins,
+                      kvs_namespace, prod_managed_path, cons_managed_path,
+                      dtl_mode, ctx);
 }
 
 dyad_rc_t dyad_produce (dyad_ctx_t* ctx, const char* fname)
@@ -621,7 +806,7 @@ dyad_rc_t dyad_consume (dyad_ctx_t* ctx, const char* fname)
     }
     // Call dyad_pull to fetch the data from the producer's
     // Flux broker
-    rc = dyad_pull (ctx, fname, resp);
+    rc = dyad_pull (ctx, resp);
     // Regardless if there was an error in dyad_pull,
     // free the KVS response object
     if (resp != NULL) {
@@ -647,6 +832,7 @@ int dyad_finalize (dyad_ctx_t** ctx)
     if (ctx == NULL || *ctx == NULL) {
         return DYAD_RC_OK;
     }
+    dyad_dtl_finalize (&(*ctx)->dtl_handle);
     if ((*ctx)->h != NULL) {
         flux_close ((*ctx)->h);
         (*ctx)->h = NULL;
