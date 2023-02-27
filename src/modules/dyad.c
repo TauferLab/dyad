@@ -22,14 +22,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 #endif  // defined(__cplusplus)
 
 #include <fcntl.h>
-#include <flux/core.h>
 #include <linux/limits.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "dyad_flux_log.h"
 #include "dyad_ctx.h"
 #include "read_all.h"
 #include "utils.h"
@@ -39,17 +40,23 @@
               - (Tstart).tv_nsec)                                              \
      / 1000000000L)
 
-#if !defined(DYAD_LOGGING_ON) || (DYAD_LOGGING_ON == 0)
-#define FLUX_LOG_INFO(...) \
-    do {                   \
-    } while (0)
-#define FLUX_LOG_ERR(...) \
-    do {                  \
-    } while (0)
-#else
-#define FLUX_LOG_INFO(h, ...) flux_log (h, LOG_INFO, __VA_ARGS__)
-#define FLUX_LOG_ERR(h, ...) flux_log_error (h, __VA_ARGS__)
-#endif
+struct dyad_mod_ctx {
+    flux_t *h;
+    bool debug;
+    flux_msg_handler_t **handlers;
+    const char *dyad_path;
+    dyad_mod_dtl_t *dtl_handle;
+};
+
+const struct dyad_mod_ctx dyad_mod_ctx_default = {
+    NULL,
+    false,
+    NULL,
+    NULL,
+    NULL
+};
+
+typedef struct dyad_mod_ctx dyad_mod_ctx_t;
 
 static void dyad_mod_fini (void) __attribute__ ((destructor));
 
