@@ -317,6 +317,16 @@ fetch_done:;
     return rc;
 }
 
+static inline dyad_rc_t process_remaining_rpc_msgs (dyad_ctx_t* ctx, flux_future_t* f)
+{
+    while (flux_rpc_get (f, NULL) == 0);
+    if (errno != ENODATA) {
+        DYAD_LOG_ERR (ctx, "An error occured in the DYAD module\n");
+        return DYAD_RC_BADRPC;
+    }
+    return DYAD_RC_OK;
+}
+
 #if DYAD_PERFFLOW
 __attribute__ ((annotate ("@critical_path()")))
 static dyad_rc_t dyad_get_data (
@@ -350,7 +360,7 @@ static inline dyad_rc_t dyad_get_data (
         ctx->h,
         "dyad.fetch",
         kvs_data->owner_rank,
-        0,
+        FLUX_RPC_STREAMING,
         "o",
         rpc_payload
     );
@@ -385,7 +395,13 @@ static inline dyad_rc_t dyad_get_data (
         DYAD_LOG_ERR (ctx, "Cannot receive data from producer module\n");
         return rc;
     }
-    return DYAD_RC_OK;
+    // Will process all remaining messages from DYAD module and check errno
+    // for the first error message. This should only check a single message because
+    // it is expected that the DTL will process any non-error messages expected by this point.
+    // If errno is ENODATA, then the module exited sucessfully. So, this function
+    // returns DYAD_RC_OK. If errno is any other value, then an error occured in the
+    // DYAD module. So, we return DYAD_RC_BADRPC.
+    return process_remaining_rpc_msgs (ctx, *f);
 }
 
 #if DYAD_PERFFLOW

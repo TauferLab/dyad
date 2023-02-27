@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "dyad_flux_log.h"
+#include "dyad_mod_dtl.h"
 #include "dyad_ctx.h"
 #include "read_all.h"
 #include "utils.h"
