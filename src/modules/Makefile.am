@@ -1,8 +1,17 @@
 lib_LTLIBRARIES = dyad.la
-dyad_la_SOURCES = dyad.c read_all.c dyad_ctx.h read_all.h
-dyad_la_LDFLAGS = $(AM_LDFLAGS) -module -avoid-version -no-undefined
-dyad_la_LIBADD = $(top_builddir)/src/utils/libutils.la $(FLUX_CORE_LIBS)
-dyad_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_builddir)/src/utils $(FLUX_CORE_CFLAGS)
+dyad_la_SOURCES = dyad.c dyad_ctx.h
+dyad_la_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	-module \
+	-avoid-version \
+	-no-undefined
+dyad_la_LIBADD = \
+	$(top_builddir)/src/utils/libutils.la \
+	$(FLUX_CORE_LIBS)
+dyad_la_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	-I$(top_builddir)/src/utils \
+	$(FLUX_CORE_CFLAGS)
 if PERFFLOW
 dyad_la_LIBADD += $(PERFFLOW_LIBS)
 dyad_la_CPPFLAGS += $(PERFFLOW_PLUGIN_CPPFLAGS) $(PERFFLOW_CFLAGS) -DDYAD_PERFFLOW=1
@@ -10,7 +19,7 @@ endif
 
 if URPC
 lib_LTLIBRARIES += urpc.la
-urpc_la_SOURCES = read_all.c urpc.c urpc_ctx.h
+urpc_la_SOURCES = urpc.c urpc_ctx.h
 # TODO replace current LDFLAGS rule with this one once libb64 is required
 # urpc_la_LDFLAGS = -module -avoid-version -no-undefined -L$(LIBB64_DIR)/src
 urpc_la_LDFLAGS = -module -avoid-version -no-undefined
