@@ -105,6 +105,13 @@ dyad_rc_t dyad_init (bool debug,
                      dyad_ctx_t** ctx);
 
 /**
+ * @brief Intialize the DYAD context using environment variables
+ * @param[out] ctx the newly initialized context
+ * @return An error code
+ */
+dyad_rc_t dyad_init_env (dyad_ctx_t** ctx);
+
+/**
  * @brief Wrapper function that performs all the common tasks needed
  *        of a producer
  * @param[in] ctx    the DYAD context for the operation

@@ -3,6 +3,7 @@
 
 #include "dyad_core.h"
 #include "dtl/dyad_dtl.h"
+#include "dyad_dtl_defs.h"
 #include "dyad_flux_log.h"
 #include "dyad_rc.h"
 #include "murmur3.h"
@@ -634,6 +635,91 @@ dyad_rc_t dyad_init (bool debug,
     (*ctx)->initialized = true;
     // TODO Print logging info
     return DYAD_RC_OK;
+}
+
+dyad_rc_t dyad_init_env (dyad_ctx_t **ctx)
+{
+    char *e = NULL;
+    bool debug = false;
+    bool check = false;
+    bool shared_storage = false;
+    unsigned int key_depth = 0;
+    unsigned int key_bins = 0;
+    char *kvs_namespace = NULL;
+    char *prod_managed_path = NULL;
+    char *cons_managed_path = NULL;
+    size_t dtl_mode_env_len = 0;
+    dyad_dtl_mode_t dtl_mode = DYAD_DTL_FLUX_RPC;
+
+    printf("DYAD_CORE: Initializing with environment varialbes\n");
+
+    if ((e = getenv (DYAD_SYNC_DEBUG_ENV))) {
+        debug = true;
+        enable_debug_dyad_utils ();
+    } else {
+        debug = false;
+        disable_debug_dyad_utils ();
+    }
+
+    if ((e = getenv (DYAD_SYNC_CHECK_ENV))) {
+        check = true;
+    } else {
+        check = false;
+    }
+
+    if ((e = getenv (DYAD_SHARED_STORAGE_ENV))) {
+        shared_storage = true;
+    } else {
+        shared_storage = false;
+    }
+
+    if ((e = getenv (DYAD_KEY_DEPTH_ENV))) {
+        key_depth = atoi (e);
+    } else {
+        key_depth = 3;
+    }
+
+    if ((e = getenv (DYAD_KEY_BINS_ENV))) {
+        key_bins = atoi (e);
+    } else {
+        key_bins = 1024;
+    }
+
+    if ((e = getenv (DYAD_KVS_NAMESPACE_ENV))) {
+        kvs_namespace = e;
+    } else {
+        kvs_namespace = NULL;
+    }
+
+    if ((e = getenv (DYAD_PATH_CONSUMER_ENV))) {
+        cons_managed_path = e;
+    } else {
+        cons_managed_path = NULL;
+    }
+
+    if ((e = getenv (DYAD_PATH_PRODUCER_ENV))) {
+        prod_managed_path = e;
+    } else {
+        prod_managed_path = NULL;
+    }
+
+    if ((e = getenv (DYAD_DTL_MODE_ENV))) {
+        dtl_mode_env_len = strlen (e);
+        if (strncmp (e, "FLUX_RPC", dtl_mode_env_len) == 0) {
+            dtl_mode = DYAD_DTL_FLUX_RPC;
+        } else if (strncmp (e, "UCX", dtl_mode_env_len) == 0) {
+            dtl_mode = DYAD_DTL_UCX;
+        } else {
+            printf ("Invalid DTL mode provided through %s. \
+                    Defaulting the FLUX_RPC\n", DYAD_DTL_MODE_ENV);
+            dtl_mode = DYAD_DTL_FLUX_RPC;
+        }
+    } else {
+        dtl_mode = DYAD_DTL_FLUX_RPC;
+    }
+    return dyad_init (debug, check, shared_storage, key_depth, key_bins,
+                      kvs_namespace, prod_managed_path, cons_managed_path,
+                      dtl_mode, ctx);
 }
 
 dyad_rc_t dyad_produce (dyad_ctx_t* ctx, const char* fname)
