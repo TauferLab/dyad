@@ -61,7 +61,7 @@ int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
     return -1;
 }
 
-int dyad_mod_rpc_respond(dyad_mod_dtl_t *dtl_handle, const int *orig_msg)
+int dyad_mod_dtl_rpc_respond(dyad_mod_dtl_t *dtl_handle, const int *orig_msg)
 {
     if (dtl_handle->mode == DYAD_DTL_UCX)
     {

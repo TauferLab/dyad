@@ -24,6 +24,9 @@ int dyad_mod_flux_dtl_init(flux_t *h, bool debug,
 int dyad_mod_flux_dtl_rpc_unpack(dyad_mod_flux_dtl_t *dtl_handle,
         const flux_msg_t *packed_obj, char **upath);
 
+int dyad_mod_flux_dtl_rpc_respond (dyad_mod_flux_dtl_t *dtl_handle,
+        const flux_msg_t *orig_msg);
+
 int dyad_mod_flux_dtl_establish_connection(dyad_mod_flux_dtl_t *dtl_handle);
 
 int dyad_mod_flux_dtl_send(dyad_mod_flux_dtl_t *dtl_handle, void *buf, size_t buflen);

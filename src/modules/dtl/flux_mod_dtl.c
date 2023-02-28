@@ -30,7 +30,15 @@ int dyad_mod_flux_dtl_rpc_unpack(dyad_mod_flux_dtl_t *dtl_handle,
         FLUX_LOG_ERR(dtl_handle->h, "Could not unpack Flux message from consumer!\n");
         return -1;
     }
+    // Save the flux_msg_t object here instead of dyad_mod_flux_dtl_rpc_respond
+    // to increase the odds that the compiler will optimize rpc_respond away
     dtl_handle->msg = packed_obj;
+    return 0;
+}
+
+int dyad_mod_flux_dtl_rpc_respond (dyad_mod_flux_dtl_t *dtl_handle,
+        const flux_msg_t *orig_msg)
+{
     return 0;
 }
 
