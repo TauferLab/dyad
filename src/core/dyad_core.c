@@ -346,6 +346,7 @@ static inline dyad_rc_t dyad_get_data (
 #endif
 {
     dyad_rc_t rc = DYAD_RC_OK;
+    dyad_rc_t final_rc = DYAD_RC_OK;
     json_t* rpc_payload;
     rc = dyad_dtl_rpc_pack (
         ctx->dtl_handle,
@@ -355,7 +356,7 @@ static inline dyad_rc_t dyad_get_data (
     if (DYAD_IS_ERROR(rc))
     {
         DYAD_LOG_ERR(ctx, "Cannot create JSON payload for Flux RPC to DYAD module\n");
-        return rc;
+        goto get_done;
     }
     *f = flux_rpc_pack (
         ctx->h,
@@ -368,13 +369,14 @@ static inline dyad_rc_t dyad_get_data (
     if (*f == NULL)
     {
         DYAD_LOG_ERR(ctx, "Cannot send RPC to producer module\n");
-        return DYAD_RC_BADRPC;
+        rc = DYAD_RC_BADRPC;
+        goto get_done;
     }
     rc = dyad_dtl_recv_rpc_response(ctx->dtl_handle, f);
     if (DYAD_IS_ERROR(rc))
     {
         DYAD_LOG_ERR(ctx, "Cannot receive and/or parse the RPC response\n");
-        return rc;
+        goto get_done;
     }
     rc = dyad_dtl_establish_connection (
         ctx->dtl_handle,
@@ -382,7 +384,7 @@ static inline dyad_rc_t dyad_get_data (
     );
     if (DYAD_IS_ERROR(rc)) {
         DYAD_LOG_ERR (ctx, "Cannot establish connection with DYAD module on broker %u\n", kvs_data->owner_rank);
-        return rc;
+        goto get_done;
     }
     rc = dyad_dtl_recv (
         ctx->dtl_handle,
@@ -394,15 +396,23 @@ static inline dyad_rc_t dyad_get_data (
     if (DYAD_IS_ERROR(rc))
     {
         DYAD_LOG_ERR (ctx, "Cannot receive data from producer module\n");
-        return rc;
+        goto get_done;
     }
+
+    rc = DYAD_RC_OK;
+
+get_done:;
+    final_rc = rc;
     // Will process all remaining messages from DYAD module and check errno
     // for the first error message. This should only check a single message because
     // it is expected that the DTL will process any non-error messages expected by this point.
     // If errno is ENODATA, then the module exited sucessfully. So, this function
     // returns DYAD_RC_OK. If errno is any other value, then an error occured in the
     // DYAD module. So, we return DYAD_RC_BADRPC.
-    return process_remaining_rpc_msgs (ctx, *f);
+    rc = process_remaining_rpc_msgs (ctx, *f);
+    if (final_rc == DYAD_RC_OK)
+        return rc;
+    return final_rc;
 }
 
 #if DYAD_PERFFLOW
