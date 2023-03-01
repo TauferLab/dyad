@@ -80,10 +80,11 @@ AC_ARG_ENABLE([perfflow],
 ########################
 # Check for the dl library (specifically, the "dlsym" function)
 AC_CHECK_LIB([dl], [dlsym])
-# FIXME: Replace 'main' with a function in '-ldyad_fstream':
-# AC_CHECK_LIB([dyad_fstream], [main])
-# FIXME: Replace 'main' with a function in '-ltap':
-# AC_CHECK_LIB([tap], [main])
+# Check for UCX v1.6.0 or higher (Required)
+# TODO: make UCX optional based on a new AC_ARG_ENABLE flag
+PKG_CHECK_MODULES([UCX],
+    [ucx >= 1.6.0]
+)
 # Find and get info for Flux-Core using pkg-config
 AX_FLUX_CORE
 PKG_CHECK_MODULES([JANSSON],
