@@ -246,6 +246,7 @@ int openat (int dirfd, const char *path, int oflag, ...)
     typedef int (*openat_ptr_t) (int, const char *, int, mode_t, ...);
     openat_ptr_t func_ptr = NULL;
     int mode = 0;
+    int flag_check = -1;
     char* realpathat_out = NULL;
     char* full_path = NULL;
 
@@ -286,7 +287,8 @@ int openat (int dirfd, const char *path, int oflag, ...)
         }
     }
 
-    if ((mode != O_RDONLY) || is_path_dir (full_path)) {
+    flag_check = (oflag & O_RDONLY) && !(oflag & (O_WRONLY | O_RDWR | O_APPEND | O_TRUNC));
+    if (flag_check || is_path_dir (full_path)) {
         // TODO: make sure if the directory mode is consistent
         goto real_call;
     }
