@@ -80,25 +80,80 @@ static inline int is_wronly (int fd)
 
 static inline char* realpathat (int dirfd, const char* restrict path,
                                 char* restrict resolved_path) {
-    char cwd[PATH_MAX];
-    char* rval = NULL;
     int rc = 0;
+    char* rval = NULL;
+    char cwd[PATH_MAX];
+    char* path_copy = NULL;
+    char* path_dir = NULL;
+    char* path_base = NULL;
+    char* tmp_path = NULL;
+
+    path_copy = strdup (path);
+    if (path_copy == NULL)
+        return NULL;
+    tmp_path = dirname (path_copy);
+    path_dir = strdup (tmp_path);
+    free (path_copy);
+    if (path_dir == NULL)
+        return NULL;
+    path_copy = strdup (path);
+    if (path_copy == NULL)
+        return NULL;
+    tmp_path = basename (path_copy);
+    path_base = strdup (tmp_path);
+    free (path_copy);
+    if (path_base == NULL)
+        return NULL;
+
     if (dirfd == AT_FDCWD) {
-        return realpath (path, resolved_path);
+        rval = realpath (path_dir, resolved_path);
+        if (rval == NULL)
+            goto realpathat_cleanup;
+    } else {
+        if (getcwd (cwd, PATH_MAX) == NULL) {
+            rval = NULL;
+            goto realpathat_cleanup;
+        }
+        if (fchdir (dirfd) != 0) {
+            rval = NULL;
+            goto realpathat_cleanup;
+        }
+        rval = realpath (path_dir, resolved_path);
+        if (chdir (cwd) != 0) {
+            if (rval != NULL && resolved_path != NULL)
+                free (resolved_path);
+            rval = NULL;
+            goto realpathat_cleanup;
+        }
+        if (rval == NULL) {
+            goto realpathat_cleanup;
+        }
     }
-    rval = getcwd (cwd, PATH_MAX);
-    if (rval == NULL)
-        return NULL;
-    rc = fchdir (dirfd);
-    if (rc != 0)
-        return NULL;
-    rval = realpath (path, resolved_path);
-    rc = chdir (cwd);
-    if (rc != 0) {
-        if (rval != NULL && resolved_path != NULL)
-            free (resolved_path);
-        return NULL;
+    // 2 because we need 1 byte for the "/" and 1 bytes for the NUL terminator
+    tmp_path = realloc (resolved_path, strlen (resolved_path) + 2 + strlen (path_base));
+    if (tmp_path == NULL) {
+        rval = NULL;
+        free (resolved_path);
+        goto realpathat_cleanup;
     }
+    resolved_path = tmp_path;
+    tmp_path = concat_str (resolved_path, path_base, "/", strlen (resolved_path) + 1);
+    if (tmp_path == NULL) {
+        rval = NULL;
+        free (resolved_path);
+        goto realpathat_cleanup;
+    }
+
+    rval = resolved_path;
+
+realpathat_cleanup:;
+
+    if (path_copy != NULL)
+        free (path_copy);
+    if (path_dir != NULL)
+        free (path_dir);
+    if (path_base != NULL)
+        free (path_base);
     return rval;
 }
 
