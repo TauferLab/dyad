@@ -78,6 +78,30 @@ static inline int is_wronly (int fd)
     return 0;
 }
 
+static inline char* realpathat (int dirfd, const char* restrict path,
+                                char* restrict resolved_path) {
+    char cwd[PATH_MAX];
+    char* rval = NULL;
+    int rc = 0;
+    if (dirfd == AT_FDCWD) {
+        return realpath (path, resolved_path);
+    }
+    rval = getcwd (cwd, PATH_MAX);
+    if (rval == NULL)
+        return NULL;
+    rc = fchdir (dirfd);
+    if (rc != 0)
+        return NULL;
+    rval = realpath (path, resolved_path);
+    rc = chdir (cwd);
+    if (rc != 0) {
+        if (rval != NULL && resolved_path != NULL)
+            free (resolved_path);
+        return NULL;
+    }
+    return rval;
+}
+
 /*****************************************************************************
  *                                                                           *
  *         DYAD Sync Constructor, Destructor and Wrapper API                 *
@@ -214,6 +238,78 @@ int open (const char *path, int oflag, ...)
 real_call:;
 
     return (func_ptr (path, oflag, mode));
+}
+
+int openat (int dirfd, const char *path, int oflag, ...)
+{
+    char *error = NULL;
+    typedef int (*openat_ptr_t) (int, const char *, int, mode_t, ...);
+    openat_ptr_t func_ptr = NULL;
+    int mode = 0;
+    char* realpathat_out = NULL;
+    char* full_path = NULL;
+
+
+    if (ctx == NULL) {
+        dyad_wrapper_init ();
+    }
+
+    if (oflag & O_CREAT) {
+        va_list arg;
+        va_start (arg, oflag);
+        mode = va_arg (arg, int);
+        va_end (arg);
+    }
+
+    func_ptr = (openat_ptr_t)dlsym (RTLD_NEXT, "openat");
+    if ((error = dlerror ())) {
+        DPRINTF (ctx, "DYAD_SYNC: error in dlsym: %s\n", error);
+        return -1;
+    }
+
+    if (path == NULL || strlen (path) == 0) {
+        goto real_call;
+    }
+
+    if (path[0] == '/') {
+        full_path = (char*) malloc (strlen (path) + 1);
+        if (full_path == NULL) {
+            DPRINTF (ctx, "DYAD_SYNC: could not allocate buffer for absolute path\n");
+            goto real_call;
+        }
+        strncpy (full_path, path, strlen (path)+1);
+    } else {
+        realpathat_out = realpathat (dirfd, path, full_path);
+        if (realpathat_out == NULL) {
+            DPRINTF (ctx, "DYAD_SYNC: could not generate full path using dirfd\n");
+            goto real_call;
+        }
+    }
+
+    if ((mode != O_RDONLY) || is_path_dir (full_path)) {
+        // TODO: make sure if the directory mode is consistent
+        goto real_call;
+    }
+
+    if (!(ctx && ctx->h) || (ctx && !ctx->reenter)) {
+        IPRINTF (ctx, "DYAD_SYNC: openat sync not applicable for \"%s\".\n",
+                 full_path);
+        goto real_call;
+    }
+
+    IPRINTF (ctx, "DYAD_SYNC: enters openat sync (\"%s\").\n", full_path);
+    if (DYAD_IS_ERROR (dyad_consume (ctx, full_path))) {
+        DPRINTF (ctx, "DYAD_SYNC: failed openat sync (\"%s\").\n", full_path);
+        goto real_call;
+    }
+    IPRINTF (ctx, "DYAD_SYNC: exists openat sync (\"%s\").\n", full_path);
+
+real_call:;
+
+    if (full_path != NULL)
+        free (full_path);
+
+    return (func_ptr (dirfd, path, oflag, mode));
 }
 
 FILE *fopen (const char *path, const char *mode)
