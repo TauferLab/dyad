@@ -32,7 +32,6 @@
 #include <unistd.h>
 
 #include "dyad_mod_dtl.h"
-#include "dyad_ctx.h"
 #include "read_all.h"
 #include "utils.h"
 
@@ -74,7 +73,7 @@ static void freectx (void *arg)
     dyad_mod_ctx_t *ctx = (dyad_mod_ctx_t *)arg;
     flux_msg_handler_delvec (ctx->handlers);
     if (ctx->dtl_handle != NULL) {
-        dyad_mod_dtl_finalize (ctx->dtl_handle);
+        dyad_mod_dtl_finalize (&(ctx->dtl_handle));
         ctx->dtl_handle = NULL;
     }
     free (ctx);
@@ -193,12 +192,13 @@ fetch_done:
     return;
 }
 
-static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode)
+static int dyad_open (flux_t *h)
 {
     dyad_mod_ctx_t *ctx = getctx (h);
     int rc = -1;
     char *e = NULL;
     dyad_mod_dtl_mode_t dtl_mode = DYAD_DTL_FLUX_RPC;
+    size_t mode_env_len = 0;
 
     if ((e = getenv ("DYAD_DTL_MODE")))
     {
@@ -206,7 +206,7 @@ static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode)
         if (strncmp(e, "UCX", mode_env_len) == 0) {
             dtl_mode = DYAD_DTL_UCX;
         }
-        else if (strncmp(e, "FLUX_RPC", mode_env_len) = 0) {
+        else if (strncmp(e, "FLUX_RPC", mode_env_len) == 0) {
             dtl_mode = DYAD_DTL_FLUX_RPC;
         }
         else {
@@ -237,7 +237,6 @@ int mod_main (flux_t *h, int argc, char **argv)
     int final_rc = 0;
     const mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     char *e = NULL;
-    size_t mode_env_len = 0;
     dyad_mod_ctx_t *ctx = NULL;
 
     if (!h) {
@@ -258,7 +257,7 @@ int mod_main (flux_t *h, int argc, char **argv)
     (ctx->dyad_path) = argv[0];
     mkdir_as_needed (ctx->dyad_path, m);
 
-    if (dyad_open (h, dtl_mode) < 0) {
+    if (dyad_open (h) < 0) {
         FLUX_LOG_ERR (ctx->h, "dyad_open failed");
         goto mod_error;
     }
@@ -282,7 +281,7 @@ int mod_main (flux_t *h, int argc, char **argv)
 mod_error:;
     return EXIT_FAILURE;
 
-mode_done:;
+mod_done:;
     return EXIT_SUCCESS;
 }
 

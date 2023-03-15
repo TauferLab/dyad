@@ -19,6 +19,7 @@
 
 const struct dyad_ctx dyad_ctx_default = {
     NULL,   // h
+    NULL,   // dtl_handle
     false,  // debug
     false,  // check
     false,  // reenter
@@ -318,7 +319,7 @@ fetch_done:;
     return rc;
 }
 
-static inline dyad_rc_t process_remaining_rpc_msgs (dyad_ctx_t* ctx, flux_future_t* f)
+static inline dyad_rc_t process_remaining_rpc_msgs (const dyad_ctx_t* ctx, flux_future_t* f)
 {
     while (flux_rpc_get (f, NULL) == 0);
     if (errno != ENODATA) {
@@ -334,14 +335,14 @@ static dyad_rc_t dyad_get_data (
     const dyad_ctx_t* ctx,
     const dyad_kvs_response_t* restrict kvs_data,
     const char** file_data,
-    int* file_len,
+    size_t* file_len,
     flux_future_t** f)
 #else
 static inline dyad_rc_t dyad_get_data (
     const dyad_ctx_t* ctx,
     const dyad_kvs_response_t* restrict kvs_data,
     const char** file_data,
-    int* file_len,
+    size_t* file_len,
     flux_future_t** f)
 #endif
 {
@@ -372,7 +373,7 @@ static inline dyad_rc_t dyad_get_data (
         rc = DYAD_RC_BADRPC;
         goto get_done;
     }
-    rc = dyad_dtl_recv_rpc_response(ctx->dtl_handle, f);
+    rc = dyad_dtl_recv_rpc_response(ctx->dtl_handle, *f);
     if (DYAD_IS_ERROR(rc))
     {
         DYAD_LOG_ERR(ctx, "Cannot receive and/or parse the RPC response\n");
@@ -388,8 +389,7 @@ static inline dyad_rc_t dyad_get_data (
     }
     rc = dyad_dtl_recv (
         ctx->dtl_handle,
-        *f,
-        file_data,
+        (void**) file_data,
         file_len
     );
     dyad_dtl_close_connection (ctx->dtl_handle);
@@ -428,7 +428,7 @@ static inline dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
 {
     dyad_rc_t rc = DYAD_RC_OK;
     const char* file_data = NULL;
-    int file_len = 0;
+    size_t file_len = 0;
     const char* odir = NULL;
     FILE* of = NULL;
     char file_path[PATH_MAX + 1];

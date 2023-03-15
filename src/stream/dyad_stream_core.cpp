@@ -69,12 +69,12 @@ void dyad_stream_core::init ()
     }
 
     if ((e = getenv (DYAD_PATH_CONSUMER_ENV))) {
-        m_is_cons = (strlen (cons_managed_path) != 0);
+        m_is_cons = (strlen (e) != 0);
     } else {
         m_is_cons = false;
     }
     if ((e = getenv (DYAD_PATH_PRODUCER_ENV))) {
-        m_is_prod = (strlen (prod_managed_path) != 0);
+        m_is_prod = (strlen (e) != 0);
     } else {
         m_is_prod = false;
     }
@@ -94,7 +94,9 @@ void dyad_stream_core::init (const dyad_params &p)
         dyad_init (p.m_debug, false, p.m_shared_storage, p.m_key_depth,
                    p.m_key_bins, p.m_kvs_namespace.c_str (),
                    p.m_prod_managed_path.c_str (),
-                   p.m_cons_managed_path.c_str (), &m_ctx);
+                   p.m_cons_managed_path.c_str (), 
+                   static_cast<dyad_dtl_mode_t>(p.m_dtl_mode),
+                   &m_ctx);
     // TODO figure out if we want to error if init fails
     m_initialized = true;
     log_info ("Stream core is initialized by parameters");

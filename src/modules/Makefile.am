@@ -1,3 +1,5 @@
+SUBDIRS = dtl
+
 lib_LTLIBRARIES = dyad.la
 dyad_la_SOURCES = \
 	dyad.c \

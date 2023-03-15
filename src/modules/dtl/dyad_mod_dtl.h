@@ -37,6 +37,6 @@ int dyad_mod_dtl_send(dyad_mod_dtl_t *dtl_handle, void *buf, size_t buflen);
 
 int dyad_mod_dtl_close_connection(dyad_mod_dtl_t *dtl_handle);
 
-int dyad_mod_dtl_finalize(dyad_mod_dtl_t *dtl_handle);
+int dyad_mod_dtl_finalize(dyad_mod_dtl_t **dtl_handle);
 
 #endif /* __DYAD_MOD_DTL_H__ */
