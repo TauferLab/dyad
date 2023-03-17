@@ -186,7 +186,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
         buf,
         buflen,
         dtl_handle->curr_comm_tag,
-        params
+        &params
     );
 #else
     stat_ptr = ucp_tag_send_sync_nb(
