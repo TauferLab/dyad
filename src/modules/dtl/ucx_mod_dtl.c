@@ -2,6 +2,9 @@
 
 #include "flux_b64.h"
 
+// Get base64_maps_rfc4648 from flux-core
+extern const base64_maps_t base64_maps_rfc4648;
+
 #define UCX_CHECK(status_code) status_code != UCS_OK
 
 #if !defined(UCP_API_VERSION)
@@ -120,7 +123,9 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
     }
     dtl_handle->addr_len = base64_decoded_length(enc_addr_len);
     dtl_handle->curr_cons_addr = (ucp_address_t*) malloc(dtl_handle->addr_len);
-    decoded_len = base64_decode((char*)dtl_handle->curr_cons_addr, dtl_handle->addr_len, enc_addr, enc_addr_len);
+    decoded_len = base64_decode_using_maps (&base64_maps_rfc4648,
+            (char*)dtl_handle->curr_cons_addr, dtl_handle->addr_len,
+            enc_addr, enc_addr_len);
     if (decoded_len < 0)
     {
         // TODO log error

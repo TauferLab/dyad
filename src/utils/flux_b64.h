@@ -3,6 +3,10 @@
  *
  * It is being used only as an internal interface to the base64 functionality
  * in libflux_core.so
+ *
+ * There is a single modification to this file that is not present in the original:
+ * the RFC 4648 functions and map have all been removed. This was done because they cannot be
+ * used directly due to being 'static'.
  */
 
 #ifndef DYAD_FLUX_BASE64_H
@@ -125,121 +129,5 @@ ssize_t base64_decode_quartet_using_maps(const base64_maps_t *maps,
 ssize_t base64_decode_tail_using_maps(const base64_maps_t *maps, char dest[3],
 				      const char *src, size_t srclen);
 
-
-/* the rfc4648 functions: */
-
-extern const base64_maps_t base64_maps_rfc4648;
-
-/**
- * base64_encode - Encode a buffer into base64 according to rfc4648
- * @param dest Buffer to encode into
- * @param destlen Length of the destination buffer
- * @param src Buffer to encode
- * @param srclen Length of the data to encode
- * @return Number of encoded bytes set in dest. -1 on error (and errno set)
- * @note dest will be nul-padded to destlen (past any required padding)
- * @note sets errno = EOVERFLOW if destlen is too small
- *
- * This function encodes src according to http://tools.ietf.org/html/rfc4648
- *
- * Example:
- *	size_t encoded_length;
- *	char dest[100];
- *	const char *src = "This string gets encoded";
- *	encoded_length = base64_encode(dest, sizeof(dest), src, strlen(src));
- *	printf("Returned data of length %zd @%p\n", encoded_length, &dest);
- */
-static inline
-ssize_t base64_encode(char *dest, size_t destlen,
-		      const char *src, size_t srclen)
-{
-	return base64_encode_using_maps(&base64_maps_rfc4648,
-					dest, destlen, src, srclen);
-}
-
-/**
- * base64_encode_triplet - encode 3 bytes into base64 according to rfc4648
- * @param dest Buffer containing 4 bytes
- * @param src Buffer containing 3 bytes
- */
-static inline
-void base64_encode_triplet(char dest[4], const char src[3])
-{
-	base64_encode_triplet_using_maps(&base64_maps_rfc4648, dest, src);
-}
-
-/**
- * base64_encode_tail - encode the final bytes of a source according to rfc4648
- * @param dest Buffer containing 4 bytes
- * @param src Buffer containing srclen bytes
- * @param srclen Number of bytes (<= 3) to encode in src
- */
-static inline
-void base64_encode_tail(char dest[4], const char *src, size_t srclen)
-{
-	base64_encode_tail_using_maps(&base64_maps_rfc4648, dest, src, srclen);
-}
-
-
-/**
- * base64_decode - decode An rfc4648 base64-encoded string
- * @param dest Buffer to decode into
- * @param destlen Length of the destination buffer
- * @param src Buffer to decode
- * @param srclen Length of the data to decode
- * @return Number of decoded bytes set in dest. -1 on error (and errno set)
- * @note dest will be nul-padded to destlen
- * @note sets errno = EOVERFLOW if destlen is too small
- * @note sets errno = EDOM if src contains invalid characters
- *
- * This function decodes the buffer according to
- * http://tools.ietf.org/html/rfc4648
- *
- * Example:
- *	size_t decoded_length;
- *	char ret[100];
- *	const char *src = "Zm9vYmFyYmF6";
- *	decoded_length = base64_decode(ret, sizeof(ret), src, strlen(src));
- *	printf("Returned data of length %zd @%p\n", decoded_length, &ret);
- */
-static inline
-ssize_t base64_decode(char *dest, size_t destlen,
-		      const char *src, size_t srclen)
-{
-	return base64_decode_using_maps(&base64_maps_rfc4648,
-					dest, destlen, src, srclen);
-}
-
-/**
- * base64_decode_quartet - decode the first 4 characters in src into dest
- * @param dest Buffer containing 3 bytes
- * @param src Buffer containing 4 characters
- * @return Number of decoded bytes set in dest. -1 on error (and errno set)
- * @note sets errno = EDOM if src contains invalid characters
- */
-static inline
-ssize_t base64_decode_quartet(char dest[3], const char src[4])
-{
-	return base64_decode_quartet_using_maps(&base64_maps_rfc4648,
-						dest, src);
-}
-
-/**
- * @brief decode the final bytes of a base64 string from src into dest
- * @param dest Buffer containing 3 bytes
- * @param src Buffer containing 4 bytes - padded with '=' as required
- * @param srclen Number of bytes to decode in src
- * @return Number of decoded bytes set in dest. -1 on error (and errno set)
- * @note sets errno = EDOM if src contains invalid characters
- * @note sets errno = EINVAL if src is an invalid base64 tail
- */
-static inline
-ssize_t base64_decode_tail(char dest[3], const char *src, size_t srclen)
-{
-	return base64_decode_tail_using_maps(&base64_maps_rfc4648,
-					     dest, src, srclen);
-}
-
-/* end rfc4648 functions */
 
 #endif /* CCAN_BASE64_H */

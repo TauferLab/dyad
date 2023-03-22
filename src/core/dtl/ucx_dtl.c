@@ -16,6 +16,8 @@
 #include <string.h>
 #endif
 
+extern const base64_maps_t base64_maps_rfc4648;
+
 // Tag mask for UCX Tag send/recv
 #define DYAD_UCX_TAG_MASK UINT64_MAX
 
@@ -237,7 +239,9 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
     // consumer_address is casted to const char* to avoid warnings
     // This is valid because it is a pointer to an opaque struct,
     // so the cast can be treated like a void*->char* cast.
-    enc_size = base64_encode(enc_buf, enc_len+1, (const char*)dtl_handle->consumer_address, dtl_handle->addr_len);
+    enc_size = base64_encode_using_maps(&base64_maps_rfc4648,
+            enc_buf, enc_len+1,
+            (const char*)dtl_handle->consumer_address, dtl_handle->addr_len);
     if (enc_size < 0)
     {
         // TODO log error
