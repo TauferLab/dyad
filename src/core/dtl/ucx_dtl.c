@@ -1,6 +1,6 @@
 #include "ucx_dtl.h"
 
-#include "dyad_err.h"
+#include "dyad_rc.h"
 
 #include "flux_b64.h"
 
@@ -124,7 +124,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     status = ucp_config_read (NULL, NULL, &config);
     if (UCX_STATUS_FAIL(status))
     {
-        FLUX_LOG_ERR (dtl_handle->h, "Could not read the UCX config\n");
+        FLUX_LOG_ERR ((*dtl_handle)->h, "Could not read the UCX config\n");
         goto error;
     }
 

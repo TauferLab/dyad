@@ -1,5 +1,5 @@
 #include "flux_dtl.h"
-#include "dyad_err.h"
+#include "dyad_rc.h"
 
 dyad_rc_t dyad_dtl_flux_init(flux_t *h, const char *kvs_namespace,
         bool debug, dyad_dtl_flux_t **dtl_handle)

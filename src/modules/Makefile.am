@@ -9,7 +9,8 @@ dyad_la_LDFLAGS = \
 	-module \
 	-avoid-version \
 	-no-undefined \
-	-shared
+	-shared \
+    -Wl,-rpath,'$(UCX_LIBDIR)'
 dyad_la_LIBADD = \
 	$(top_builddir)/src/utils/libutils.la \
 	$(top_builddir)/src/modules/dtl/libdyad_mod_dtl.la \

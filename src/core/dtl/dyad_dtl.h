@@ -32,6 +32,6 @@ dyad_rc_t dyad_dtl_recv(dyad_dtl_t *dtl_handle,
 
 dyad_rc_t dyad_dtl_close_connection(dyad_dtl_t *dtl_handle);
 
-dyad_rc_t dyad_dtl_finalize(dyad_dtl_t *dtl_handle);
+dyad_rc_t dyad_dtl_finalize(dyad_dtl_t **dtl_handle);
 
 #endif /* __DYAD_DTL_H__ */

@@ -814,7 +814,7 @@ int dyad_finalize (dyad_ctx_t** ctx)
     if (ctx == NULL || *ctx == NULL) {
         return DYAD_RC_OK;
     }
-    dyad_dtl_finalize ((*ctx)->dtl_handle);
+    dyad_dtl_finalize (&(*ctx)->dtl_handle);
     if ((*ctx)->h != NULL) {
         flux_close ((*ctx)->h);
         (*ctx)->h = NULL;

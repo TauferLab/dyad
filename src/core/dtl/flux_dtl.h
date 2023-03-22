@@ -2,7 +2,7 @@
 #define __FLUX_DTL_H__
 
 #include "dyad_flux_log.h"
-#include "dyad_err.h"
+#include "dyad_rc.h"
 
 #include <jansson.h>
 
