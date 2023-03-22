@@ -49,7 +49,7 @@ dyad_rc_t dyad_dtl_flux_recv(dyad_dtl_flux_t *dtl_handle,
         void **buf, size_t *buflen)
 {
     int rc = 0;
-    rc = flux_rpc_get_raw(dtl_handle->f, (const void**) buf, buflen);
+    rc = flux_rpc_get_raw(dtl_handle->f, (const void**) buf, (int*) buflen);
     if (rc < 0)
     {
         FLUX_LOG_ERR (dtl_handle->h, "Could not get file data from Flux RPC\n");

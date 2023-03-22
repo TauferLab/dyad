@@ -108,12 +108,10 @@ static inline dyad_rc_t publish_via_flux (const dyad_ctx_t* restrict ctx,
 #endif
 {
     dyad_rc_t rc = DYAD_RC_OK;
-    const char* prod_managed_path = NULL;
     flux_kvs_txn_t* txn = NULL;
     const size_t topic_len = PATH_MAX;
     char topic[PATH_MAX + 1];
     memset (topic, 0, topic_len + 1);
-    prod_managed_path = ctx->prod_managed_path;
     memset (topic, '\0', topic_len + 1);
     // Generate the KVS key from the file path relative to
     // the producer-managed directory
@@ -418,11 +416,9 @@ get_done:;
 #if DYAD_PERFFLOW
 __attribute__ ((annotate ("@critical_path()")))
 static dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
-                            const char* restrict fname,
                             const dyad_kvs_response_t* restrict kvs_data)
 #else
 static inline dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
-                                   const char* restrict fname,
                                    const dyad_kvs_response_t* restrict kvs_data)
 #endif
 {
@@ -788,7 +784,7 @@ dyad_rc_t dyad_consume (dyad_ctx_t* ctx, const char* fname)
     }
     // Call dyad_pull to fetch the data from the producer's
     // Flux broker
-    rc = dyad_pull (ctx, fname, resp);
+    rc = dyad_pull (ctx, resp);
     // Regardless if there was an error in dyad_pull,
     // free the KVS response object
     if (resp != NULL) {

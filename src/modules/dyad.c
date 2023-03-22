@@ -234,9 +234,7 @@ static const struct flux_msg_handler_spec htab[] = {{FLUX_MSGTYPE_REQUEST,
 
 int mod_main (flux_t *h, int argc, char **argv)
 {
-    int final_rc = 0;
     const mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
-    char *e = NULL;
     dyad_mod_ctx_t *ctx = NULL;
 
     if (!h) {
