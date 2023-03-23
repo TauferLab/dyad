@@ -2,7 +2,7 @@
 
 #include "dyad_rc.h"
 
-#include "flux_b64.h"
+#include "base64.h"
 
 #ifdef __cplusplus
 #include <cstdlib>

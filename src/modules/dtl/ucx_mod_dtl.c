@@ -1,6 +1,6 @@
 #include "ucx_mod_dtl.h"
 
-#include "flux_b64.h"
+#include "base64.h"
 
 // Get base64_maps_rfc4648 from flux-core
 extern const base64_maps_t base64_maps_rfc4648;
