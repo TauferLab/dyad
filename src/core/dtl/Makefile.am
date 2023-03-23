@@ -18,6 +18,7 @@ libdyad_dtl_la_CPPFLAGS = \
 	$(FLUX_CORE_CFLAGS) \
 	$(JANSSON_CFLAGS) \
 	$(UCX_CFLAGS)
+libdyad_dtl_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-rpath,'$(UCX_LIBDIR)'
 if PERFFLOW
 libdyad_dtl_la_LIBADD += $(PERFFLOW_LIBS)
 libdyad_dtl_la_CPPFLAGS += \

@@ -8,7 +8,6 @@ libdyad_core_la_LIBADD = \
 	$(top_builddir)/src/utils/libmurmur3.la \
 	$(FLUX_CORE_LIBS)
 libdyad_core_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_builddir)/src/utils $(FLUX_CORE_CFLAGS)
-libdyad_core_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-rpath,'$(UCX_LIBDIR)'
 if PERFFLOW
 libdyad_core_la_LIBADD += $(PERFFLOW_LIBS)
 libdyad_core_la_CPPFLAGS += $(PERFFLOW_PLUGIN_CPPFLAGS) $(PERFFLOW_CFLAGS) -DDYAD_PERFFLOW=1
