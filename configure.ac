@@ -194,6 +194,7 @@ fi
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/utils/Makefile
+                 src/utils/base64/Makefile
                  src/utils/libtap/Makefile
                  src/core/Makefile
                  src/core/dtl/Makefile

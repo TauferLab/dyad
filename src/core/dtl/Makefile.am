@@ -14,6 +14,7 @@ libdyad_dtl_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-I$(top_builddir)/src/core \
 	-I$(top_builddir)/src/utils \
+	-I$(top_builddir)/src/utils/base64 \
 	$(FLUX_CORE_CFLAGS) \
 	$(JANSSON_CFLAGS) \
 	$(UCX_CFLAGS)
