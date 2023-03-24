@@ -1,7 +1,11 @@
-SUBDIRS = dtl
-
 lib_LTLIBRARIES = dyad.la
 dyad_la_SOURCES = \
+	dtl/dyad_mod_dtl.c \
+	dtl/dyad_mod_dtl.h \
+	dtl/flux_mod_dtl.c \
+	dtl/flux_mod_dtl.h \
+	dtl/ucx_mod_dtl.c \
+	dtl/ucx_mod_dtl.h \
 	dyad.c \
 	dyad_flux_log.h
 dyad_la_LDFLAGS = \
@@ -13,12 +17,15 @@ dyad_la_LDFLAGS = \
     -Wl,-rpath,'$(UCX_LIBDIR)'
 dyad_la_LIBADD = \
 	$(top_builddir)/src/utils/libutils.la \
-	$(top_builddir)/src/modules/dtl/libdyad_mod_dtl.la \
+    $(UCX_LIBS) \
+	$(JANSSON_LIBS) \
 	$(FLUX_CORE_LIBS)
 dyad_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
-	-I$(top_builddir)/src/utils \
-	-I$(top_builddir)/src/modules/dtl \
+	-I$(top_srcdir)/src/utils \
+	-I$(top_srcdir)/src/utils/base64 \
+	$(UCX_CFLAGS) \
+	$(JANSSON_CFLAGS) \
 	$(FLUX_CORE_CFLAGS)
 if PERFFLOW
 dyad_la_LIBADD += $(PERFFLOW_LIBS)

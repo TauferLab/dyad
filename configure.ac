@@ -197,10 +197,8 @@ AC_CONFIG_FILES([Makefile
                  src/utils/base64/Makefile
                  src/utils/libtap/Makefile
                  src/core/Makefile
-                 src/core/dtl/Makefile
                  src/stream/Makefile
                  src/modules/Makefile
-                 src/modules/dtl/Makefile
                  src/wrapper/Makefile])
 
 #####################

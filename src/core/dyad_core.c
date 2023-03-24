@@ -2,10 +2,10 @@
 #include <unistd.h>
 
 #include "dyad_core.h"
-#include "dtl/dyad_dtl.h"
 #include "dyad_dtl_defs.h"
 #include "dyad_flux_log.h"
 #include "dyad_rc.h"
+#include "dtl/dyad_dtl.h"
 #include "murmur3.h"
 #include "utils.h"
 

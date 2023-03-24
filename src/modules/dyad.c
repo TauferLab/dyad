@@ -8,7 +8,6 @@
  * SPDX-License-Identifier: LGPL-3.0
 \************************************************************/
 
-#include "dtl/dyad_mod_dtl.h"
 #if defined(__cplusplus)
 #include <cerrno>
 #include <cstddef>
@@ -31,7 +30,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "dyad_mod_dtl.h"
+#include "dtl/dyad_mod_dtl.h"
 #include "read_all.h"
 #include "utils.h"
 
