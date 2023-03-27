@@ -418,8 +418,10 @@ get_done:;
     // If errno is ENODATA, then the module exited sucessfully. So, this function
     // returns DYAD_RC_OK. If errno is any other value, then an error occured in the
     // DYAD module. So, we return DYAD_RC_BADRPC.
-    DYAD_LOG_INFO (ctx, "Process any outstanding RPC messages to check if the module failed with an error");
-    rc = process_remaining_rpc_msgs (ctx, *f);
+    if (final_rc != DYAD_RC_RPC_ERROR) {
+        DYAD_LOG_INFO (ctx, "Process any outstanding RPC messages to check if the module failed with an error");
+        rc = process_remaining_rpc_msgs (ctx, *f);
+    }
     if (final_rc == DYAD_RC_OK)
         return rc;
     return final_rc;
