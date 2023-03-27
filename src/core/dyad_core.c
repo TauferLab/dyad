@@ -347,6 +347,7 @@ static inline dyad_rc_t dyad_get_data (
     dyad_rc_t rc = DYAD_RC_OK;
     dyad_rc_t final_rc = DYAD_RC_OK;
     json_t* rpc_payload;
+    DYAD_LOG_INFO (ctx, "Packing payload for RPC to DYAD module");
     rc = dyad_dtl_rpc_pack (
         ctx->dtl_handle,
         kvs_data->fpath,
@@ -357,6 +358,7 @@ static inline dyad_rc_t dyad_get_data (
         DYAD_LOG_ERR(ctx, "Cannot create JSON payload for Flux RPC to DYAD module\n");
         goto get_done;
     }
+    DYAD_LOG_INFO (ctx, "Sending payload for RPC to DYAD module");
     *f = flux_rpc_pack (
         ctx->h,
         "dyad.fetch",
@@ -371,12 +373,14 @@ static inline dyad_rc_t dyad_get_data (
         rc = DYAD_RC_BADRPC;
         goto get_done;
     }
+    DYAD_LOG_INFO (ctx, "Receive RPC response from DYAD module");
     rc = dyad_dtl_recv_rpc_response(ctx->dtl_handle, *f);
     if (DYAD_IS_ERROR(rc))
     {
         DYAD_LOG_ERR(ctx, "Cannot receive and/or parse the RPC response\n");
         goto get_done;
     }
+    DYAD_LOG_INFO (ctx, "Establish DTL connection with DYAD module");
     rc = dyad_dtl_establish_connection (
         ctx->dtl_handle,
         kvs_data->owner_rank
@@ -385,11 +389,13 @@ static inline dyad_rc_t dyad_get_data (
         DYAD_LOG_ERR (ctx, "Cannot establish connection with DYAD module on broker %u\n", kvs_data->owner_rank);
         goto get_done;
     }
+    DYAD_LOG_INFO (ctx, "Receive file data via DTL");
     rc = dyad_dtl_recv (
         ctx->dtl_handle,
         (void**) file_data,
         file_len
     );
+    DYAD_LOG_INFO (ctx, "Close DTL connection with DYAD module");
     dyad_dtl_close_connection (ctx->dtl_handle);
     if (DYAD_IS_ERROR(rc))
     {
@@ -407,6 +413,7 @@ get_done:;
     // If errno is ENODATA, then the module exited sucessfully. So, this function
     // returns DYAD_RC_OK. If errno is any other value, then an error occured in the
     // DYAD module. So, we return DYAD_RC_BADRPC.
+    DYAD_LOG_INFO (ctx, "Process any outstanding RPC messages to check if the module failed with an error");
     rc = process_remaining_rpc_msgs (ctx, *f);
     if (final_rc == DYAD_RC_OK)
         return rc;
