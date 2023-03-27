@@ -319,12 +319,17 @@ fetch_done:;
 
 static inline dyad_rc_t process_remaining_rpc_msgs (const dyad_ctx_t* ctx, flux_future_t* f)
 {
-    while (flux_rpc_get (f, NULL) == 0);
-    if (errno != ENODATA) {
-        DYAD_LOG_ERR (ctx, "An error occured in the DYAD module\n");
-        return DYAD_RC_BADRPC;
+    while (true) {
+        if (flux_rpc_get (f, NULL) < 0) {
+            if (errno == ENODATA) {
+                DYAD_LOG_INFO (ctx, "Reached end of RPC stream from module");
+                return DYAD_RC_OK;
+            } else {
+                DYAD_LOG_ERR (ctx, "An error occured in the DYAD module\n");
+                return DYAD_RC_BADRPC;
+            }
+        }
     }
-    return DYAD_RC_OK;
 }
 
 #if DYAD_PERFFLOW

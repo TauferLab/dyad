@@ -18,7 +18,7 @@ int dyad_mod_flux_dtl_init(flux_t *h, bool debug,
 int dyad_mod_flux_dtl_rpc_unpack(dyad_mod_flux_dtl_t *dtl_handle,
         const flux_msg_t *packed_obj, char **upath)
 {
-   int errcode = flux_request_unpack(
+    int errcode = flux_request_unpack(
         packed_obj,
         NULL,
         "{s:s}",
@@ -49,6 +49,7 @@ int dyad_mod_flux_dtl_establish_connection(dyad_mod_flux_dtl_t *dtl_handle)
 
 int dyad_mod_flux_dtl_send(dyad_mod_flux_dtl_t *dtl_handle, void *buf, size_t buflen)
 {
+    FLUX_LOG_INFO (dtl_handle->h, "Send data to consumer using a Flux RPC response");
     int errcode = flux_respond_raw(dtl_handle->h, dtl_handle->msg, buf, (int)buflen);
     if (errcode < 0)
     {

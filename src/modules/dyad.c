@@ -181,20 +181,17 @@ static void dyad_fetch_request_cb (flux_t *h,
         goto fetch_error;
     }
 
-    goto fetch_done;
+    FLUX_LOG_INFO (h, "Close RPC message stream with an ENODATA message");
+    if (flux_respond_error (h, msg, ENODATA, NULL) < 0) {
+        FLUX_LOG_ERR (h, "DYAD_MOD: %s: flux_respond_error with ENODATA failed\n", __FUNCTION__);
+    }
+    errno = saved_errno;
+    return;
 
 fetch_error:
     FLUX_LOG_INFO (h, "Close RPC message stream with an error message");
     if (flux_respond_error (h, msg, errno, NULL) < 0) {
         FLUX_LOG_ERR (h, "DYAD_MOD: %s: flux_respond_error", __FUNCTION__);
-    }
-    errno = saved_errno;
-    return;
-
-fetch_done:
-    FLUX_LOG_INFO (h, "Close RPC message stream with an ENODATA message");
-    if (flux_respond_error (h, msg, ENODATA, NULL) < 0) {
-        FLUX_LOG_ERR (h, "DYAD_MOD: %s: flux_respond_error with ENODATA failed\n", __FUNCTION__);
     }
     errno = saved_errno;
     return;
