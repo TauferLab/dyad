@@ -1,7 +1,7 @@
 SUBDIRS = libtap base64
 
 noinst_LTLIBRARIES = libutils.la libmurmur3.la
-libutils_la_SOURCES = utils.c utils.h read_all.c read_all.h flux_b64.h
+libutils_la_SOURCES = utils.c utils.h read_all.c read_all.h
 libutils_la_CPPFLAGS = \
     $(AM_CPPFLAGS) \
 	$(FLUX_CORE_CFLAGS)

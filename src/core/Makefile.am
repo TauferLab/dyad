@@ -8,6 +8,7 @@ libdyad_core_la_SOURCES = \
 	dtl/ucx_dtl.h \
 	dyad_core.c
 libdyad_core_la_LIBADD = \
+    $(top_builddir)/src/utils/libutils.la \
 	$(top_builddir)/src/utils/libmurmur3.la \
 	$(UCX_LIBS) \
 	$(JANSSON_LIBS) \
