@@ -123,6 +123,11 @@ static void dyad_fetch_request_cb (flux_t *h,
     int saved_errno = errno;
     int rc = 0;
 
+    if (!flux_msg_is_streaming (msg)) {
+        errno = EPROTO;
+        goto fetch_error;
+    }
+
     if (flux_msg_get_userid (msg, &userid) < 0)
         goto fetch_error;
 
@@ -186,10 +191,11 @@ static void dyad_fetch_request_cb (flux_t *h,
         FLUX_LOG_ERR (h, "DYAD_MOD: %s: flux_respond_error with ENODATA failed\n", __FUNCTION__);
     }
     errno = saved_errno;
+    FLUX_LOG_INFO (h, "Finished dyad.fetch module invocation\n");
     return;
 
 fetch_error:
-    FLUX_LOG_INFO (h, "Close RPC message stream with an error message");
+    FLUX_LOG_INFO (h, "Close RPC message stream with an error (errno = %d)\n", errno);
     if (flux_respond_error (h, msg, errno, NULL) < 0) {
         FLUX_LOG_ERR (h, "DYAD_MOD: %s: flux_respond_error", __FUNCTION__);
     }
