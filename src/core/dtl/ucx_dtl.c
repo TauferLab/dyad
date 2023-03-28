@@ -123,6 +123,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     (*dtl_handle)->ucx_worker = NULL;
 
     // Read the UCX configuration
+    FLUX_LOG_INFO ((*dtl_handle)->h, "Reading UCP config\n");
     status = ucp_config_read (NULL, NULL, &config);
     if (UCX_STATUS_FAIL(status))
     {
@@ -149,6 +150,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     ucx_params.request_init = dyad_ucx_request_init;
 
     // Initialize UCX
+    FLUX_LOG_INFO ((*dtl_handle)->h, "Initializing UCP\n");
     status = ucp_init(&ucx_params, config, &(*dtl_handle)->ucx_ctx);
 
     // If in debug mode, print the configuration of UCX to stderr
@@ -182,6 +184,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     worker_params.events = UCP_WAKEUP_TAG_RECV;
 
     // Create the worker and log an error if that fails
+    FLUX_LOG_INFO ((*dtl_handle)->h, "Creating UCP worker\n");
     status = ucp_worker_create(
         (*dtl_handle)->ucx_ctx,
         &worker_params,
@@ -195,6 +198,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
 
     // Query the worker for its address
     worker_attrs.field_mask = UCP_WORKER_ATTR_FIELD_ADDRESS;
+    FLUX_LOG_INFO ((*dtl_handle)->h, "Get address of UCP worker\n");
     status = ucp_worker_query(
         (*dtl_handle)->ucx_worker,
         &worker_attrs
@@ -227,6 +231,7 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
         // TODO log error
         return DYAD_RC_BADPACK;
     }
+    FLUX_LOG_INFO ((*dtl_handle)->h, "Encode UCP address using base64\n");
     enc_len = base64_encoded_length(dtl_handle->addr_len);
     // Add 1 to encoded length because the encoded buffer will be
     // packed as if it is a string
@@ -250,6 +255,7 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
     }
     // Use Jansson to pack the tag and UCX address into
     // the payload to be sent via RPC to the producer plugin
+    FLUX_LOG_INFO ((*dtl_handle)->h, "Packing RPC payload for UCX DTL\n");
     *packed_obj = json_pack(
         "{s:s, s:I, s:s%}",
         "upath",
