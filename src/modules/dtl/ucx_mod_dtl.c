@@ -48,6 +48,7 @@ int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle
     (*dtl_handle)->curr_cons_addr = NULL;
     (*dtl_handle)->addr_len = 0;
     (*dtl_handle)->curr_comm_tag = 0;
+    FLUX_LOG_INFO (h, "Reading UCP config for DTL\n");
     status = ucp_config_read(NULL, NULL, &config);
     if (UCX_CHECK(status))
     {
@@ -62,6 +63,7 @@ int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle
         UCP_FEATURE_WAKEUP;
     ucp_params.request_size = sizeof(struct mod_request);
     ucp_params.request_init = dyad_mod_ucx_request_init;
+    FLUX_LOG_INFO (h, "Initializing UCX\n");
     status = ucp_init(&ucp_params, config, &((*dtl_handle)->ucx_ctx));
     if (debug)
     {
@@ -81,6 +83,7 @@ int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle
     // Flux modules are single-threaded, so enable single-thread mode in UCX
     worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
     worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
+    FLUX_LOG_INFO (h, "Creating UCP worker\n");
     status = ucp_worker_create(
         (*dtl_handle)->ucx_ctx,
         &worker_params,
@@ -121,6 +124,7 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
         FLUX_LOG_ERR(dtl_handle->h, "Could not unpack Flux message from consumer!\n");
         return -1;
     }
+    FLUX_LOG_INFO (dtl_handle->h, "Decoding consumer UCP address using base64\n");
     dtl_handle->addr_len = base64_decoded_length(enc_addr_len);
     dtl_handle->curr_cons_addr = (ucp_address_t*) malloc(dtl_handle->addr_len);
     decoded_len = base64_decode_using_maps (&base64_maps_rfc4648,
@@ -152,6 +156,7 @@ int dyad_mod_ucx_dtl_establish_connection(dyad_mod_ucx_dtl_t *dtl_handle)
     params.address = dtl_handle->curr_cons_addr;
     params.err_mode = UCP_ERR_HANDLING_MODE_NONE; // TODO decide if we want to enable
                                                   // UCX endpoint error handling
+    FLUX_LOG_INFO (dtl_handle->h, "Create UCP endpoint for communication with consumer\n");
     status = ucp_ep_create(
         dtl_handle->ucx_worker,
         &params,
@@ -186,6 +191,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     ucp_request_param_t params;
     params.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK;
     params.cb.send = dyad_ucx_send_handler;
+    FLUX_LOG_INFO (dtl_handle->h, "Sending data to consumer with ucp_tag_send_sync_nbx\n");
     stat_ptr = ucp_tag_send_sync_nbx(
         dtl_handle->curr_ep,
         buf,
@@ -194,6 +200,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
         &params
     );
 #else
+    FLUX_LOG_INFO (dtl_handle->h, "Sending data to consumer with ucp_tag_send_sync_nb\n");
     stat_ptr = ucp_tag_send_sync_nb(
         dtl_handle->curr_ep,
         buf,
@@ -203,6 +210,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
         dyad_ucx_send_handler
     );
 #endif
+    FLUX_LOG_INFO (dtl_handle->h, "Wait for send to complete\n");
     if (UCS_PTR_IS_ERR(stat_ptr))
     {
         status = UCS_PTR_STATUS(stat_ptr);
@@ -224,9 +232,10 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     }
     if (UCX_CHECK(status))
     {
-        FLUX_LOG_INFO(dtl_handle->h, "UCP Tag Send failed!\n");
+        FLUX_LOG_ERR (dtl_handle->h, "UCP Tag Send failed!\n");
         return -1;
     }
+    FLUX_LOG_INFO (dtl_handle->h, "Data send with UCP succeeded\n");
     return 0;
 }
 
@@ -242,6 +251,7 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
             // However, some systems (e.g., Lassen) may have an older verison
             // This conditional compilation will use ucp_tag_send_sync_nbx if using UCX 1.9+,
             // and it will use the deprecated ucp_tag_send_sync_nb if using UCX < 1.9.
+            FLUX_LOG_INFO (dtl_handle->h, "Start async closing of UCP endpoint\n");
 #if UCP_API_VERSION >= UCP_VERSION(1, 9)
             ucp_request_param_t close_params;
             close_params.op_attr_mask = UCP_OP_ATTR_FIELD_FLAGS;
@@ -251,6 +261,7 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
             // TODO change to FORCE if we decide to enable err handleing mode
             stat_ptr = ucp_ep_close_nb(dtl_handle->curr_ep, UCP_EP_CLOSE_MODE_FLUSH);
 #endif
+            FLUX_LOG_INFO (dtl_handle->h, "Wait for endpoint closing to finish\n");
             if (stat_ptr != NULL)
             {
                 // Endpoint close is in-progress.
@@ -285,6 +296,7 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
         }
         dtl_handle->curr_comm_tag = 0;
     }
+    FLUX_LOG_INFO (dtl_handle->h, "UCP endpoint close successful\n");
     return 0;
 }
 
