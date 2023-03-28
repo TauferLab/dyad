@@ -43,6 +43,7 @@ dyad_rc_t dyad_dtl_rpc_pack(dyad_dtl_t *dtl_handle, const char *upath, uint32_t 
         return dyad_dtl_ucx_rpc_pack(
             (dyad_dtl_ucx_t*) dtl_handle->real_dtl_handle,
             upath,
+            producer_rank,
             packed_obj
         );
     }
@@ -50,6 +51,7 @@ dyad_rc_t dyad_dtl_rpc_pack(dyad_dtl_t *dtl_handle, const char *upath, uint32_t 
         return dyad_dtl_flux_rpc_pack(
             (dyad_dtl_flux_t*) dtl_handle->real_dtl_handle,
             upath,
+            producer_rank,
             packed_obj
         );
     }
