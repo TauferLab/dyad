@@ -231,7 +231,7 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
         // TODO log error
         return DYAD_RC_BADPACK;
     }
-    FLUX_LOG_INFO ((*dtl_handle)->h, "Encode UCP address using base64\n");
+    FLUX_LOG_INFO (dtl_handle->h, "Encode UCP address using base64\n");
     enc_len = base64_encoded_length(dtl_handle->addr_len);
     // Add 1 to encoded length because the encoded buffer will be
     // packed as if it is a string
@@ -270,7 +270,7 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
     dtl_handle->comm_tag = ((uint64_t)producer_rank << 32) | (uint64_t)consumer_rank;
     // Use Jansson to pack the tag and UCX address into
     // the payload to be sent via RPC to the producer plugin
-    FLUX_LOG_INFO ((*dtl_handle)->h, "Packing RPC payload for UCX DTL\n");
+    FLUX_LOG_INFO (dtl_handle->h, "Packing RPC payload for UCX DTL\n");
     *packed_obj = json_pack(
         "{s:s, s:I, s:s%}",
         "upath",
