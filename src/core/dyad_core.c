@@ -319,8 +319,11 @@ fetch_done:;
 
 static inline dyad_rc_t process_remaining_rpc_msgs (const dyad_ctx_t* ctx, flux_future_t* f)
 {
+    DYAD_LOG_INFO (ctx, "In process_remaining_rpc_msgs\n");
+    int rc = 0;
     while (true) {
-        if (flux_rpc_get (f, NULL) < 0) {
+        if ((rc = flux_rpc_get (f, NULL)) < 0) {
+            DYAD_LOG_INFO(ctx, "flux_rpc_get returned < 0 (rc = %d)\n", rc);
             if (errno == ENODATA) {
                 DYAD_LOG_INFO (ctx, "Reached end of RPC stream from module");
                 return DYAD_RC_OK;
@@ -329,6 +332,7 @@ static inline dyad_rc_t process_remaining_rpc_msgs (const dyad_ctx_t* ctx, flux_
                 return DYAD_RC_BADRPC;
             }
         }
+        DYAD_LOG_INFO(ctx, "flux_rpc_get returned >= 0 (rc = %d)\n", rc);
     }
 }
 
@@ -356,6 +360,7 @@ static inline dyad_rc_t dyad_get_data (
     rc = dyad_dtl_rpc_pack (
         ctx->dtl_handle,
         kvs_data->fpath,
+        kvs_data->owner_rank,
         &rpc_payload
     );
     if (DYAD_IS_ERROR(rc))
@@ -387,8 +392,7 @@ static inline dyad_rc_t dyad_get_data (
     }
     DYAD_LOG_INFO (ctx, "Establish DTL connection with DYAD module");
     rc = dyad_dtl_establish_connection (
-        ctx->dtl_handle,
-        kvs_data->owner_rank
+        ctx->dtl_handle
     );
     if (DYAD_IS_ERROR(rc)) {
         DYAD_LOG_ERR (ctx, "Cannot establish connection with DYAD module on broker %u\n", kvs_data->owner_rank);

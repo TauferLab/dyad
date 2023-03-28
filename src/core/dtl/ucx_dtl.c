@@ -221,7 +221,7 @@ error:;
 }
 
 dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
-        json_t **packed_obj)
+        uint32_t producer_rank, json_t **packed_obj)
 {
     size_t enc_len = 0;
     char* enc_buf = NULL;
@@ -253,6 +253,21 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
         free(enc_buf);
         return DYAD_RC_BADPACK;
     }
+    FLUX_LOG_INFO (dtl_handle->h, "Creating UCP tag for tag matching\n");
+    // Because we're using tag-matching send/recv for communication,
+    // there's no need to do any real connection establishment here.
+    // Instead, we use this function to create the tag that will be
+    // used for the upcoming communication.
+    uint32_t consumer_rank = 0;
+    if (flux_get_rank(dtl_handle->h, &consumer_rank) < 0)
+    {
+        FLUX_LOG_ERR (dtl_handle->h, "Cannot get consumer rank\n");
+        return DYAD_RC_FLUXFAIL;
+    }
+    // The tag is a 64 bit unsigned integer consisting of the
+    // 32-bit rank of the producer followed by the 32-bit rank
+    // of the consumer
+    dtl_handle->comm_tag = ((uint64_t)producer_rank << 32) | (uint64_t)consumer_rank;
     // Use Jansson to pack the tag and UCX address into
     // the payload to be sent via RPC to the producer plugin
     FLUX_LOG_INFO ((*dtl_handle)->h, "Packing RPC payload for UCX DTL\n");
@@ -281,23 +296,8 @@ dyad_rc_t dyad_dtl_ucx_recv_rpc_response(dyad_dtl_ucx_t *dtl_handle,
     return DYAD_RC_OK;
 }
 
-dyad_rc_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle,
-        uint32_t producer_rank)
+dyad_rc_t dyad_dtl_ucx_establish_connection(dyad_dtl_ucx_t *dtl_handle)
 {
-    // Because we're using tag-matching send/recv for communication,
-    // there's no need to do any real connection establishment here.
-    // Instead, we use this function to create the tag that will be
-    // used for the upcoming communication.
-    uint32_t consumer_rank = 0;
-    if (flux_get_rank(dtl_handle->h, &consumer_rank) < 0)
-    {
-        FLUX_LOG_ERR (dtl_handle->h, "Cannot get consumer rank\n");
-        return DYAD_RC_FLUXFAIL;
-    }
-    // The tag is a 64 bit unsigned integer consisting of the
-    // 32-bit rank of the producer followed by the 32-bit rank
-    // of the consumer
-    dtl_handle->comm_tag = ((uint64_t)producer_rank << 32) | (uint64_t)consumer_rank;
     return DYAD_RC_OK;
 }
 

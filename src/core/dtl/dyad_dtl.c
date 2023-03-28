@@ -31,12 +31,12 @@ dyad_rc_t dyad_dtl_init(dyad_dtl_mode_t mode, flux_t *h,
     {
         return dyad_dtl_flux_init (h, kvs_namespace, debug,
                 (dyad_dtl_flux_t**)&(*dtl_handle)->real_dtl_handle);
-   }
+    }
     FLUX_LOG_ERR (h, "Invalid DYAD DTL Mode: %d\n", (int) mode);
     return DYAD_RC_BADDTLMODE;
 }
 
-dyad_rc_t dyad_dtl_rpc_pack(dyad_dtl_t *dtl_handle, const char *upath,
+dyad_rc_t dyad_dtl_rpc_pack(dyad_dtl_t *dtl_handle, const char *upath, uint32_t producer_rank,
         json_t **packed_obj)
 {
     if (dtl_handle->mode == DYAD_DTL_UCX) {
@@ -77,18 +77,15 @@ dyad_rc_t dyad_dtl_recv_rpc_response(dyad_dtl_t* dtl_handle, flux_future_t *f)
     return DYAD_RC_BADDTLMODE;
 }
 
-dyad_rc_t dyad_dtl_establish_connection(dyad_dtl_t *dtl_handle,
-        uint32_t producer_rank) {
+dyad_rc_t dyad_dtl_establish_connection(dyad_dtl_t *dtl_handle) {
     if (dtl_handle->mode == DYAD_DTL_UCX) {
         return dyad_dtl_ucx_establish_connection(
-            (dyad_dtl_ucx_t*) dtl_handle->real_dtl_handle,
-            producer_rank
+            (dyad_dtl_ucx_t*) dtl_handle->real_dtl_handle
         );
     }
     if (dtl_handle->mode == DYAD_DTL_FLUX_RPC) {
         return dyad_dtl_flux_establish_connection(
-            (dyad_dtl_flux_t*) dtl_handle->real_dtl_handle,
-            producer_rank
+            (dyad_dtl_flux_t*) dtl_handle->real_dtl_handle
         );
     }
     FLUX_LOG_ERR (dtl_handle->h, "Invalid DYAD DTL Mode: %d\n", (int) dtl_handle->mode);

@@ -17,7 +17,7 @@ dyad_rc_t dyad_dtl_flux_init(flux_t *h, const char *kvs_namespace,
 }
 
 dyad_rc_t dyad_dtl_flux_rpc_pack(dyad_dtl_flux_t *dtl_handle, const char *upath,
-       json_t **packed_obj)
+        uint32_t producer_rank, json_t **packed_obj)
 {
     *packed_obj = json_pack(
         "{s:s}",
@@ -39,8 +39,7 @@ dyad_rc_t dyad_dtl_flux_recv_rpc_response(dyad_dtl_flux_t *dtl_handle,
     return DYAD_RC_OK;
 }
 
-dyad_rc_t dyad_dtl_flux_establish_connection(dyad_dtl_flux_t *dtl_handle,
-        uint32_t producer_rank)
+dyad_rc_t dyad_dtl_flux_establish_connection(dyad_dtl_flux_t *dtl_handle)
 {
     return DYAD_RC_OK;
 }
