@@ -319,8 +319,10 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
             dtl_handle->ucx_worker,
             dtl_handle->comm_tag,
             DYAD_UCX_TAG_MASK,
-            1,
-            &msg_info,
+            1, // Remove the message from UCP tracking
+            // Requires calling ucp_tag_msg_recv_nb
+            // with the ucp_tag_message_h to retrieve message
+            &msg_info
         );
     } while (msg == NULL);
     //while (true)
