@@ -23,7 +23,7 @@ static void dyad_mod_ucx_request_init(void *request)
     real_request->completed = 0;
 }
 
-#if UCP_API_VERSION >= UCP_VERSION(1, 9)
+#if UCP_API_VERSION >= UCP_VERSION(1, 10)
 static void dyad_ucx_send_handler(void *req, ucs_status_t status, void *ctx)
 #else
 static void dyad_ucx_send_handler(void *req, ucs_status_t status)
@@ -187,7 +187,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     // However, some systems (e.g., Lassen) may have an older verison
     // This conditional compilation will use ucp_tag_send_sync_nbx if using UCX 1.9+,
     // and it will use the deprecated ucp_tag_send_sync_nb if using UCX < 1.9.
-#if UCP_API_VERSION >= UCP_VERSION(1, 9)
+#if UCP_API_VERSION >= UCP_VERSION(1, 10)
     ucp_request_param_t params;
     params.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK;
     params.cb.send = dyad_ucx_send_handler;
@@ -252,7 +252,7 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
             // This conditional compilation will use ucp_tag_send_sync_nbx if using UCX 1.9+,
             // and it will use the deprecated ucp_tag_send_sync_nb if using UCX < 1.9.
             FLUX_LOG_INFO (dtl_handle->h, "Start async closing of UCP endpoint\n");
-#if UCP_API_VERSION >= UCP_VERSION(1, 9)
+#if UCP_API_VERSION >= UCP_VERSION(1, 10)
             ucp_request_param_t close_params;
             close_params.op_attr_mask = UCP_OP_ATTR_FIELD_FLAGS;
             close_params.flags = 0; // TODO change if we decide to enable err handling mode

@@ -43,7 +43,7 @@ static void dyad_ucx_request_init(void *request)
 
 // Define a function that ucp_tag_msg_recv_nbx will use
 // as a callback to signal the completion of the async receive
-#if UCP_API_VERSION >= UCP_VERSION(1, 9)
+#if UCP_API_VERSION >= UCP_VERSION(1, 10)
 static void dyad_recv_callback(void *request, ucs_status_t status,
         const ucp_tag_recv_info_t *tag_info, void *user_data)
 {
@@ -335,9 +335,9 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
         // If data has not arrived, check if there are
         // any other events in the worker's queue.
         // If so, start the loop over to handle the next event
-        FLUX_LOG_INFO (dtl_handle->h, "Progress UCP worker to check if any other UCP events are available\n");
-        if (ucp_worker_progress(dtl_handle->ucx_worker))
+        else if (ucp_worker_progress(dtl_handle->ucx_worker))
         {
+            FLUX_LOG_INFO (dtl_handle->h, "Progressed UCP worker to check if any other UCP events are available\n");
             continue;
         }
         // No other events are queued. So, we will wait on new
@@ -364,7 +364,7 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
         return DYAD_RC_SYSFAIL;
     }
     FLUX_LOG_INFO (dtl_handle->h, "Receive data using async UCX operation\n");
-#if UCP_API_VERSION >= UCP_VERSION(1, 9)
+#if UCP_API_VERSION >= UCP_VERSION(1, 10)
     // Define the settings for the recv operation
     //
     // The settings enabled are:
