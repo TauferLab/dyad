@@ -207,6 +207,7 @@ static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode)
 {
     dyad_mod_ctx_t *ctx = getctx (h);
     int rc = -1;
+    char *e = NULL;
 
     if ((e = getenv ("DYAD_MOD_DEBUG")) && atoi (e))
         ctx->debug = true;
