@@ -310,10 +310,12 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
     dyad_ucx_request_t* req = NULL;
     // Use 'ucp_worker_wait' to poll the worker until
     // the tag recv event that we're looking for comes in.
+    FLUX_LOG_INFO (dtl_handle->h, "Starting UCP polling for incoming data\n");
     while (true)
     {
         // Probe the tag recv event at the top
         // of the worker's queue
+        FLUX_LOG_INFO (dtl_handle->h, "Probe UCP worker with tag %lu\n", dtl_handle->comm_tag);
         msg = ucp_tag_probe_nb(
             dtl_handle->ucx_worker,
             dtl_handle->comm_tag,
@@ -327,18 +329,21 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
         // break the loop
         if (msg != NULL)
         {
+            FLUX_LOG_INFO (dtl_handle->h, "Data has arrived, so end polling\n");
             break;
         }
         // If data has not arrived, check if there are
         // any other events in the worker's queue.
         // If so, start the loop over to handle the next event
-        else if (ucp_worker_progress(dtl_handle->ucx_worker))
+        FLUX_LOG_INFO (dtl_handle->h, "Progress UCP worker to check if any other UCP events are available\n");
+        if (ucp_worker_progress(dtl_handle->ucx_worker))
         {
             continue;
         }
         // No other events are queued. So, we will wait on new
         // events to come in. By using 'ucp_worker_wait' for this,
         // we let the OS do other work in the meantime (no spin locking).
+        FLUX_LOG_INFO (dtl_handle->h, "Launch pre-emptable wait until UCP worker gets new events\n");
         status = ucp_worker_wait(dtl_handle->ucx_worker);
         // If the wait fails, log an error
         if (UCX_STATUS_FAIL(status))
@@ -358,6 +363,7 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
         FLUX_LOG_ERR (dtl_handle->h, "Could not allocate memory for file\n");
         return DYAD_RC_SYSFAIL;
     }
+    FLUX_LOG_INFO (dtl_handle->h, "Receive data using async UCX operation\n");
 #if UCP_API_VERSION >= UCP_VERSION(1, 9)
     // Define the settings for the recv operation
     //
@@ -393,6 +399,7 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
     );
 #endif
     // Wait on the recv operation to complete
+    FLUX_LOG_INFO (dtl_handle->h, "Wait for async recv to complete\n");
     status = dyad_ucx_request_wait(dtl_handle, req);
     // If the recv operation failed, log an error, free the data buffer,
     // and set the buffer pointer to NULL
@@ -403,6 +410,7 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
         *buf = NULL;
         return DYAD_RC_UCXCOMM_FAIL;
     }
+    FLUX_LOG_INFO (dtl_handle->h, "Data receive using UCX is successful\n");
     return DYAD_RC_OK;
 }
 
