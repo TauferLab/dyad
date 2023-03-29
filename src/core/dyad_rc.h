@@ -20,7 +20,8 @@ enum dyad_core_return_codes {
     DYAD_RC_UCXWAIT_FAIL = -14,   // UCX wait (either custom or
                                   // 'ucp_worker_wait') failed
     DYAD_RC_UCXCOMM_FAIL = -15,   // UCX communication routine failed
-    DYAD_RC_RPC_ERROR = -16,      // An error (indicated by errno) occured in the DYAD module
+    DYAD_RC_RPC_FINISHED = -16,   // The Flux RPC responded with ENODATA (i.e.,
+                                  // end of stream) sooner than expected
 };
 
 typedef enum dyad_core_return_codes dyad_rc_t;

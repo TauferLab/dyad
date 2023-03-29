@@ -53,10 +53,11 @@ dyad_rc_t dyad_dtl_flux_recv(dyad_dtl_flux_t *dtl_handle,
     if (rc < 0)
     {
         FLUX_LOG_ERR (dtl_handle->h, "Could not get file data from Flux RPC\n");
-        if (errno == ENODATA || errno != ENOSYS || errno != EINVAL)
-            return DYAD_RC_RPC_ERROR;
+        if (errno == ENODATA)
+            return DYAD_RC_RPC_FINISHED;
         return DYAD_RC_BADRPC;
     }
+    flux_future_reset (dtl_handle->f);
     return DYAD_RC_OK;
 }
 
