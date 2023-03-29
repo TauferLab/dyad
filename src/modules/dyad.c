@@ -213,17 +213,23 @@ static int dyad_open (flux_t *h)
 
     if ((e = getenv ("DYAD_DTL_MODE")))
     {
+        FLUX_LOG_INFO (ctx->h, "DYAD_DTL_MODE set: %s!\n", e);
         mode_env_len = strlen(e);
         if (strncmp(e, "UCX", mode_env_len) == 0) {
+            FLUX_LOG_INFO (ctx->h, "DYAD_DTL_MODE set to UCX!\n");
             dtl_mode = DYAD_DTL_UCX;
         }
         else if (strncmp(e, "FLUX_RPC", mode_env_len) == 0) {
+            FLUX_LOG_INFO (ctx->h, "DYAD_DTL_MODE set to FLUX_RPC!\n");
             dtl_mode = DYAD_DTL_FLUX_RPC;
         }
         else {
             FLUX_LOG_ERR (ctx->h, "Invalid value for DYAD_DTL_MODE provided\n");
             return -1;
         }
+    }
+    else {
+        FLUX_LOG_INFO (ctx->h, "DYAD_DTL_MODE not set!\n");
     }
 
     if ((e = getenv ("DYAD_MOD_DEBUG")) && atoi (e))
