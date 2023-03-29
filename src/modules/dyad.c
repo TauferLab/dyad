@@ -203,34 +203,10 @@ fetch_error:
     return;
 }
 
-static int dyad_open (flux_t *h)
+static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode)
 {
     dyad_mod_ctx_t *ctx = getctx (h);
     int rc = -1;
-    char *e = NULL;
-    dyad_mod_dtl_mode_t dtl_mode = DYAD_DTL_FLUX_RPC;
-    size_t mode_env_len = 0;
-
-    if ((e = getenv ("DYAD_DTL_MODE")))
-    {
-        FLUX_LOG_INFO (ctx->h, "DYAD_DTL_MODE set: %s!\n", e);
-        mode_env_len = strlen(e);
-        if (strncmp(e, "UCX", mode_env_len) == 0) {
-            FLUX_LOG_INFO (ctx->h, "DYAD_DTL_MODE set to UCX!\n");
-            dtl_mode = DYAD_DTL_UCX;
-        }
-        else if (strncmp(e, "FLUX_RPC", mode_env_len) == 0) {
-            FLUX_LOG_INFO (ctx->h, "DYAD_DTL_MODE set to FLUX_RPC!\n");
-            dtl_mode = DYAD_DTL_FLUX_RPC;
-        }
-        else {
-            FLUX_LOG_ERR (ctx->h, "Invalid value for DYAD_DTL_MODE provided\n");
-            return -1;
-        }
-    }
-    else {
-        FLUX_LOG_INFO (ctx->h, "DYAD_DTL_MODE not set!\n");
-    }
 
     if ((e = getenv ("DYAD_MOD_DEBUG")) && atoi (e))
         ctx->debug = true;
@@ -249,10 +225,21 @@ static const struct flux_msg_handler_spec htab[] = {{FLUX_MSGTYPE_REQUEST,
                                                      dyad_fetch_request_cb, 0},
                                                     FLUX_MSGHANDLER_TABLE_END};
 
+void usage()
+{
+    fprintf(stderr, "Usage: flux exec -r all flux module load dyad.so <PRODUCER_PATH> <DTL_MODE>\n\n");
+    fprintf(stderr, "DTL_MODE Values:\n");
+    fprintf(stderr, "================\n");
+    fprintf(stderr, " * FLUX_RPC: use Flux's RPC response mechanism to send data to consumer\n");
+    fprintf(stderr, " * UCX: use UCX to send data to consumer\n");
+}
+
 int mod_main (flux_t *h, int argc, char **argv)
 {
     const mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     dyad_mod_ctx_t *ctx = NULL;
+    size_t dtl_mode_len = 0;
+    dyad_mod_dtl_mode_t dtl_mode = DYAD_DTL_FLUX_RPC;
 
     if (!h) {
         fprintf (stderr, "Failed to get flux handle\n");
@@ -261,18 +248,30 @@ int mod_main (flux_t *h, int argc, char **argv)
 
     ctx = getctx (h);
 
-    if (argc != 1) {
+    if (argc < 1) {
         FLUX_LOG_ERR (ctx->h,
-                      "DYAD_MOD: Missing argument. "
-                      "Requires a local dyad path specified.\n");
-        fprintf (stderr,
-                 "Missing argument. Requires a local dyad path specified.\n");
+                      "DYAD_MOD: Missing argument(s). "
+                      "Requires a local dyad path.\n");
+        usage();
         goto mod_error;
     }
     (ctx->dyad_path) = argv[0];
     mkdir_as_needed (ctx->dyad_path, m);
 
-    if (dyad_open (h) < 0) {
+    if (argc >= 2) {
+        dtl_mode_len = strlen(argv[1]);
+        if (strncmp (argv[1], "FLUX_RPC", dtl_mode_len) == 0) {
+            dtl_mode = DYAD_DTL_FLUX_RPC;
+        } else if (strncmp (argv[1], "UCX", dtl_mode_len) == 0) {
+            dtl_mode = DYAD_DTL_UCX;
+        } else {
+            FLUX_LOG_ERR (ctx->h, "Invalid DTL mode provided\n");
+            usage();
+            goto mod_error;
+        }
+    }
+
+    if (dyad_open (h, dtl_mode) < 0) {
         FLUX_LOG_ERR (ctx->h, "dyad_open failed");
         goto mod_error;
     }

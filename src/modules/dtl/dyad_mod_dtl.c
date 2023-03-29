@@ -9,8 +9,9 @@ struct dyad_mod_dtl {
     void *real_handle;
 };
 
-int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode, flux_t *h,
-        bool debug, dyad_mod_dtl_t **dtl_handle)
+int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode,
+        flux_t *h, bool debug,
+        dyad_mod_dtl_t **dtl_handle)
 {
     *dtl_handle = malloc(sizeof(struct dyad_mod_dtl));
     if (*dtl_handle == NULL)
