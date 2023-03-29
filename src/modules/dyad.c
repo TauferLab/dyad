@@ -113,6 +113,7 @@ static void dyad_fetch_request_cb (flux_t *h,
     const flux_msg_t *msg,
     void *arg)
 {
+    FLUX_LOG_INFO (h, "Launched callback for dyad.fetch\n");
     dyad_mod_ctx_t *ctx = getctx (h);
     ssize_t inlen = 0;
     void *inbuf = NULL;
