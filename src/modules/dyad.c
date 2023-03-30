@@ -44,8 +44,7 @@ struct dyad_mod_ctx {
     bool debug;
     flux_msg_handler_t **handlers;
     const char *dyad_path;
-    dyad_mod_dtl_mode_t dtl_mode;
-    // dyad_mod_dtl_t *dtl_handle;
+    dyad_mod_dtl_t *dtl_handle;
 };
 
 const struct dyad_mod_ctx dyad_mod_ctx_default = {
@@ -53,7 +52,7 @@ const struct dyad_mod_ctx dyad_mod_ctx_default = {
     false,
     NULL,
     NULL,
-    0, //NULL
+    NULL
 };
 
 typedef struct dyad_mod_ctx dyad_mod_ctx_t;
@@ -72,10 +71,10 @@ static void freectx (void *arg)
 {
     dyad_mod_ctx_t *ctx = (dyad_mod_ctx_t *)arg;
     flux_msg_handler_delvec (ctx->handlers);
-    // if (ctx->dtl_handle != NULL) {
-    //     dyad_mod_dtl_finalize (&(ctx->dtl_handle));
-    //     ctx->dtl_handle = NULL;
-    // }
+    if (ctx->dtl_handle != NULL) {
+        dyad_mod_dtl_finalize (&(ctx->dtl_handle));
+        ctx->dtl_handle = NULL;
+    }
     free (ctx);
 }
 
@@ -89,8 +88,7 @@ static dyad_mod_ctx_t *getctx (flux_t *h)
         ctx->debug = false;
         ctx->handlers = NULL;
         ctx->dyad_path = NULL;
-        //ctx->dtl_handle = NULL;
-        ctx->dtl_mode = DYAD_DTL_FLUX_RPC;
+        ctx->dtl_handle = NULL;
         if (flux_aux_set (h, "dyad", ctx, freectx) < 0) {
             FLUX_LOG_ERR (h, "DYAD_MOD: flux_aux_set() failed!\n");
             goto getctx_error;
@@ -134,18 +132,6 @@ static void dyad_fetch_request_cb (flux_t *h,
 
     if (flux_msg_get_userid (msg, &userid) < 0)
         goto fetch_error;
-
-    rc = dyad_mod_dtl_init (
-        ctx->dtl_mode,
-        h,
-        ctx->debug,
-        &dtl_handle
-    );
-    if (rc < 0) {
-        FLUX_LOG_ERR (h, "DYAD_MOD: Could not initialize DTL\n");
-        errno = ECONNREFUSED;
-        goto fetch_error;
-    }
 
     FLUX_LOG_INFO (h, "DYAD_MOD: unpacking RPC message");
 
@@ -229,13 +215,12 @@ static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode)
 
     if ((e = getenv ("DYAD_MOD_DEBUG")) && atoi (e))
         ctx->debug = true;
-    ctx->dtl_mode = dtl_mode;
-    // rc = dyad_mod_dtl_init (
-    //     dtl_mode,
-    //     h,
-    //     ctx->debug,
-    //     &(ctx->dtl_handle)
-    // );
+    rc = dyad_mod_dtl_init (
+        dtl_mode,
+        h,
+        ctx->debug,
+        &(ctx->dtl_handle)
+    );
 
     return rc;
 }
