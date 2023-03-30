@@ -413,7 +413,7 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
     );
 #endif
     // Wait on the recv operation to complete
-    FLUX_LOG_INFO (dtl_handle->h, "Wait for async recv to complete\n");
+    FLUX_LOG_INFO (dtl_handle->h, "Wait for UCP recv operation to complete\n");
     status = dyad_ucx_request_wait(dtl_handle, req);
     // If the recv operation failed, log an error, free the data buffer,
     // and set the buffer pointer to NULL
