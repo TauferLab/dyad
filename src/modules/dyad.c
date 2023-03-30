@@ -123,7 +123,6 @@ static void dyad_fetch_request_cb (flux_t *h,
     char fullpath[PATH_MAX + 1] = {'\0'};
     int saved_errno = errno;
     int rc = 0;
-    dyad_mod_dtl_t *dtl_handle = NULL;
 
     if (!flux_msg_is_streaming (msg)) {
         errno = EPROTO;
@@ -135,7 +134,7 @@ static void dyad_fetch_request_cb (flux_t *h,
 
     FLUX_LOG_INFO (h, "DYAD_MOD: unpacking RPC message");
 
-    if (dyad_mod_dtl_rpc_unpack (dtl_handle, msg, &upath) < 0) {
+    if (dyad_mod_dtl_rpc_unpack (ctx->dtl_handle, msg, &upath) < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not unpack message from client\n");
         errno = EPROTO;
         goto fetch_error;
@@ -144,7 +143,7 @@ static void dyad_fetch_request_cb (flux_t *h,
     FLUX_LOG_INFO (h, "DYAD_MOD: requested user_path: %s", upath);
     FLUX_LOG_INFO (h, "DYAD_MOD: sending initial response to consumer");
 
-    if (dyad_mod_dtl_rpc_respond (dtl_handle, msg) < 0) {
+    if (dyad_mod_dtl_rpc_respond (ctx->dtl_handle, msg) < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not send primary RPC response to client\n");
         goto fetch_error;
     }
@@ -173,21 +172,20 @@ static void dyad_fetch_request_cb (flux_t *h,
     close (fd);
 
     FLUX_LOG_INFO (h, "Establish DTL connection with consumer");
-    if (dyad_mod_dtl_establish_connection (dtl_handle) < 0) {
+    if (dyad_mod_dtl_establish_connection (ctx->dtl_handle) < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not establish DTL connection with client\n");
         errno = ECONNREFUSED;
         goto fetch_error;
     }
     FLUX_LOG_INFO (h, "Send file to consumer with DTL");
-    rc = dyad_mod_dtl_send (dtl_handle, inbuf, inlen);
+    rc = dyad_mod_dtl_send (ctx->dtl_handle, inbuf, inlen);
     FLUX_LOG_INFO (h, "Close DTL connection with consumer");
-    dyad_mod_dtl_close_connection (dtl_handle);
+    dyad_mod_dtl_close_connection (ctx->dtl_handle);
     if (rc < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not send data to client via DTL\n");
         errno = ECOMM;
         goto fetch_error;
     }
-    dyad_mod_dtl_finalize (&(dtl_handle));
 
     FLUX_LOG_INFO (h, "Close RPC message stream with an ENODATA message");
     if (flux_respond_error (h, msg, ENODATA, NULL) < 0) {
@@ -198,7 +196,6 @@ static void dyad_fetch_request_cb (flux_t *h,
     return;
 
 fetch_error:
-    dyad_mod_dtl_finalize (&(dtl_handle));
     FLUX_LOG_INFO (h, "Close RPC message stream with an error (errno = %d)\n", errno);
     if (flux_respond_error (h, msg, errno, NULL) < 0) {
         FLUX_LOG_ERR (h, "DYAD_MOD: %s: flux_respond_error", __FUNCTION__);
