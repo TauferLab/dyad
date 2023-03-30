@@ -44,7 +44,8 @@ struct dyad_mod_ctx {
     bool debug;
     flux_msg_handler_t **handlers;
     const char *dyad_path;
-    dyad_mod_dtl_t *dtl_handle;
+    dyad_mod_dtl_mode_t dtl_mode;
+    // dyad_mod_dtl_t *dtl_handle;
 };
 
 const struct dyad_mod_ctx dyad_mod_ctx_default = {
@@ -52,7 +53,7 @@ const struct dyad_mod_ctx dyad_mod_ctx_default = {
     false,
     NULL,
     NULL,
-    NULL
+    0, //NULL
 };
 
 typedef struct dyad_mod_ctx dyad_mod_ctx_t;
@@ -71,10 +72,10 @@ static void freectx (void *arg)
 {
     dyad_mod_ctx_t *ctx = (dyad_mod_ctx_t *)arg;
     flux_msg_handler_delvec (ctx->handlers);
-    if (ctx->dtl_handle != NULL) {
-        dyad_mod_dtl_finalize (&(ctx->dtl_handle));
-        ctx->dtl_handle = NULL;
-    }
+    // if (ctx->dtl_handle != NULL) {
+    //     dyad_mod_dtl_finalize (&(ctx->dtl_handle));
+    //     ctx->dtl_handle = NULL;
+    // }
     free (ctx);
 }
 
@@ -88,7 +89,8 @@ static dyad_mod_ctx_t *getctx (flux_t *h)
         ctx->debug = false;
         ctx->handlers = NULL;
         ctx->dyad_path = NULL;
-        ctx->dtl_handle = NULL;
+        //ctx->dtl_handle = NULL;
+        ctx->dtl_mode = DYAD_DTL_FLUX_RPC;
         if (flux_aux_set (h, "dyad", ctx, freectx) < 0) {
             FLUX_LOG_ERR (h, "DYAD_MOD: flux_aux_set() failed!\n");
             goto getctx_error;
@@ -123,6 +125,7 @@ static void dyad_fetch_request_cb (flux_t *h,
     char fullpath[PATH_MAX + 1] = {'\0'};
     int saved_errno = errno;
     int rc = 0;
+    dyad_mod_dtl_t *dtl_handle = NULL;
 
     if (!flux_msg_is_streaming (msg)) {
         errno = EPROTO;
@@ -132,9 +135,16 @@ static void dyad_fetch_request_cb (flux_t *h,
     if (flux_msg_get_userid (msg, &userid) < 0)
         goto fetch_error;
 
+    rc = dyad_mod_dtl_init (
+        dtl_mode,
+        h,
+        ctx->debug,
+        &dtl_handle
+    );
+
     FLUX_LOG_INFO (h, "DYAD_MOD: unpacking RPC message");
 
-    if (dyad_mod_dtl_rpc_unpack (ctx->dtl_handle, msg, &upath) < 0) {
+    if (dyad_mod_dtl_rpc_unpack (dtl_handle, msg, &upath) < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not unpack message from client\n");
         errno = EPROTO;
         goto fetch_error;
@@ -143,7 +153,7 @@ static void dyad_fetch_request_cb (flux_t *h,
     FLUX_LOG_INFO (h, "DYAD_MOD: requested user_path: %s", upath);
     FLUX_LOG_INFO (h, "DYAD_MOD: sending initial response to consumer");
 
-    if (dyad_mod_dtl_rpc_respond (ctx->dtl_handle, msg) < 0) {
+    if (dyad_mod_dtl_rpc_respond (dtl_handle, msg) < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not send primary RPC response to client\n");
         goto fetch_error;
     }
@@ -172,20 +182,21 @@ static void dyad_fetch_request_cb (flux_t *h,
     close (fd);
 
     FLUX_LOG_INFO (h, "Establish DTL connection with consumer");
-    if (dyad_mod_dtl_establish_connection (ctx->dtl_handle) < 0) {
+    if (dyad_mod_dtl_establish_connection (dtl_handle) < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not establish DTL connection with client\n");
         errno = ECONNREFUSED;
         goto fetch_error;
     }
     FLUX_LOG_INFO (h, "Send file to consumer with DTL");
-    rc = dyad_mod_dtl_send (ctx->dtl_handle, inbuf, inlen);
+    rc = dyad_mod_dtl_send (dtl_handle, inbuf, inlen);
     FLUX_LOG_INFO (h, "Close DTL connection with consumer");
-    dyad_mod_dtl_close_connection (ctx->dtl_handle);
+    dyad_mod_dtl_close_connection (dtl_handle);
     if (rc < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not send data to client via DTL\n");
         errno = ECOMM;
         goto fetch_error;
     }
+    dyad_mod_dtl_finalize (&(dtl_handle));
 
     FLUX_LOG_INFO (h, "Close RPC message stream with an ENODATA message");
     if (flux_respond_error (h, msg, ENODATA, NULL) < 0) {
@@ -196,6 +207,7 @@ static void dyad_fetch_request_cb (flux_t *h,
     return;
 
 fetch_error:
+    dyad_mod_dtl_finalize (&(dtl_handle));
     FLUX_LOG_INFO (h, "Close RPC message stream with an error (errno = %d)\n", errno);
     if (flux_respond_error (h, msg, errno, NULL) < 0) {
         FLUX_LOG_ERR (h, "DYAD_MOD: %s: flux_respond_error", __FUNCTION__);
@@ -212,12 +224,13 @@ static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode)
 
     if ((e = getenv ("DYAD_MOD_DEBUG")) && atoi (e))
         ctx->debug = true;
-    rc = dyad_mod_dtl_init (
-        dtl_mode,
-        h,
-        ctx->debug,
-        &(ctx->dtl_handle)
-    );
+    ctx->dtl_mode = dtl_mode;
+    // rc = dyad_mod_dtl_init (
+    //     dtl_mode,
+    //     h,
+    //     ctx->debug,
+    //     &(ctx->dtl_handle)
+    // );
 
     return rc;
 }
