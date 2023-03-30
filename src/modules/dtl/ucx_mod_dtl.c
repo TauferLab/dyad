@@ -110,15 +110,19 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
     char* enc_addr = NULL;
     size_t enc_addr_len = 0;
     int errcode = 0;
+    uint32_t tag_prod = 0;
+    uint32_t tag_cons = 0;
     ssize_t decoded_len = 0;
     FLUX_LOG_INFO (dtl_handle->h, "Unpacking RPC payload\n");
     errcode = flux_request_unpack(packed_obj,
         NULL,
-        "{s:s, s:I, s:s%}",
+        "{s:s, s:i, s:i, s:s%}",
         "upath",
         upath,
-        "tag",
-        dtl_handle->curr_comm_tag,
+        "tag_prod",
+        &tag_prod,
+        "tag_cons",
+        &tag_cons,
         "ucx_addr",
         &enc_addr,
         &enc_addr_len
@@ -128,6 +132,7 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
         FLUX_LOG_ERR(dtl_handle->h, "Could not unpack Flux message from consumer!\n");
         return -1;
     }
+    dtl_handle->curr_comm_tag = ((uint64_t)tag_prod << 32) | (uint64_t)tag_cons;
     FLUX_LOG_INFO (dtl_handle->h, "Obtained upath from RPC payload: %s\n", upath);
     FLUX_LOG_INFO (dtl_handle->h, "Obtained UCP tag from RPC payload: %lu\n", dtl_handle->curr_comm_tag);
     FLUX_LOG_INFO (dtl_handle->h, "Decoding consumer UCP address using base64\n");
