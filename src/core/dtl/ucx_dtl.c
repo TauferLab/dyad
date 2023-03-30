@@ -274,9 +274,9 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
     *packed_obj = json_pack(
         "{s:s, s:I}",// s:s%}",
         "upath",
-        upath
+        upath,
         "tag",
-        dtl_handle->comm_tag,
+        (json_int_t) dtl_handle->comm_tag
         //"ucx_addr",
         //enc_buf, enc_len
     );
