@@ -278,7 +278,8 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
         "tag",
         dtl_handle->comm_tag,
         "ucx_addr",
-        enc_buf, enc_len
+        "FAKE", 4
+        //enc_buf, enc_len
     );
     free(enc_buf);
     // If the packing failed, log an error
