@@ -272,15 +272,15 @@ dyad_rc_t dyad_dtl_ucx_rpc_pack(dyad_dtl_ucx_t *dtl_handle, const char *upath,
     // the payload to be sent via RPC to the producer plugin
     FLUX_LOG_INFO (dtl_handle->h, "Packing RPC payload for UCX DTL\n");
     *packed_obj = json_pack(
-        "{s:s, s:i, s:i}",// s:s%}",
+        "{s:s, s:i, s:i, s:s%}",
         "upath",
         upath,
         "tag_prod",
         (int) producer_rank,
         "tag_cons",
-        (int) consumer_rank
-        //"ucx_addr",
-        //enc_buf, enc_len
+        (int) consumer_rank,
+        "ucx_addr",
+        enc_buf, enc_len
     );
     free(enc_buf);
     // If the packing failed, log an error
