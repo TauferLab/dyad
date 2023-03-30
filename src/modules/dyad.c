@@ -136,7 +136,7 @@ static void dyad_fetch_request_cb (flux_t *h,
         goto fetch_error;
 
     rc = dyad_mod_dtl_init (
-        dtl_mode,
+        ctx->dtl_mode,
         h,
         ctx->debug,
         &dtl_handle
