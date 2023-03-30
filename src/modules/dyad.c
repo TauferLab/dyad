@@ -141,6 +141,11 @@ static void dyad_fetch_request_cb (flux_t *h,
         ctx->debug,
         &dtl_handle
     );
+    if (rc < 0) {
+        FLUX_LOG_ERR (h, "DYAD_MOD: Could not initialize DTL\n");
+        errno = ECONNREFUSED;
+        goto fetch_error;
+    }
 
     FLUX_LOG_INFO (h, "DYAD_MOD: unpacking RPC message");
 

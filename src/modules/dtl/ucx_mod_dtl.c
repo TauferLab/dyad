@@ -94,6 +94,7 @@ int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle
         FLUX_LOG_ERR(h, "Could not create UCP worker for data transport!\n");
         goto ucx_init_error;
     }
+    FLUX_LOG_INFO (h, "UCX initialization successful\n");
     return 0;
 
 ucx_init_error:;
