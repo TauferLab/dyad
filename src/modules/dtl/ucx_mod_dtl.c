@@ -81,8 +81,10 @@ int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle
         goto ucx_init_error;
     }
     // Flux modules are single-threaded, so enable single-thread mode in UCX
-    worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
+    worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE |
+        UCP_WORKER_PARAM_FIELD_EVENTS;
     worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
+    worker_params.events = UCP_WAKEUP_TAG_SEND;
     FLUX_LOG_INFO (h, "Creating UCP worker\n");
     status = ucp_worker_create(
         (*dtl_handle)->ucx_ctx,
