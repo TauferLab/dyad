@@ -243,7 +243,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     }
     if (UCX_CHECK(status))
     {
-        FLUX_LOG_ERR (dtl_handle->h, "UCP Tag Send failed!\n");
+        FLUX_LOG_ERR (dtl_handle->h, "UCP Tag Send failed (status = %d)!\n", (int)status);
         return -1;
     }
     FLUX_LOG_INFO (dtl_handle->h, "Data send with UCP succeeded\n");
