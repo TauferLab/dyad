@@ -181,6 +181,7 @@ static void dyad_fetch_request_cb (flux_t *h,
     rc = dyad_mod_dtl_send (ctx->dtl_handle, inbuf, inlen);
     FLUX_LOG_INFO (h, "Close DTL connection with consumer");
     dyad_mod_dtl_close_connection (ctx->dtl_handle);
+    free(inbuf);
     if (rc < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not send data to client via DTL\n");
         errno = ECOMM;
