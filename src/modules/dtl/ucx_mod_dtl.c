@@ -221,18 +221,17 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
         dyad_ucx_send_handler
     );
 #endif
-    FLUX_LOG_INFO (dtl_handle->h, "Wait for send to complete\n");
-    FLUX_LOG_INFO (dtl_handle->h, "Output of UCS_PTR_IS_ERR: %d\n", UCS_PTR_IS_ERR(stat_ptr));
-    FLUX_LOG_INFO (dtl_handle->h, "Output of UCS_PTR_IS_PTR: %d\n", UCS_PTR_IS_PTR(stat_ptr));
-    FLUX_LOG_INFO (dtl_handle->h, "Output of UCS_PTR_STATUS: %d\n", UCS_PTR_STATUS(stat_ptr));
+    FLUX_LOG_INFO (dtl_handle->h, "Processing UCP send request\n");
     if (UCS_PTR_IS_ERR(stat_ptr))
     {
+        FLUX_LOG_INFO (dtl_handle->h, "Error occured in UCP send\n");
         status = UCS_PTR_STATUS(stat_ptr);
     }
     else if (UCS_PTR_IS_PTR(stat_ptr))
     {
+        FLUX_LOG_INFO (dtl_handle->h, "Waiting for send to complete\n");
         req = (mod_request_t*)stat_ptr;
-        while (req->completed != 0)
+        while (req->completed == 0)
         {
             ucp_worker_progress(dtl_handle->ucx_worker);
         }
@@ -242,6 +241,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     }
     else
     {
+        FLUX_LOG_INFO (dtl_handle->h, "UCP send completed immediately\n");
         status = UCS_OK;
     }
     if (UCX_CHECK(status))
