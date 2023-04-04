@@ -222,6 +222,9 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     );
 #endif
     FLUX_LOG_INFO (dtl_handle->h, "Wait for send to complete\n");
+    FLUX_LOG_INFO (dtl_handle->h, "Output of UCS_PTR_IS_ERR: %d\n", UCS_PTR_IS_ERR(stat_ptr));
+    FLUX_LOG_INFO (dtl_handle->h, "Output of UCS_PTR_IS_PTR: %d\n", UCS_PTR_IS_PTR(stat_ptr));
+    FLUX_LOG_INFO (dtl_handle->h, "Output of UCS_PTR_STATUS: %d\n", UCS_PTR_STATUS(stat_ptr));
     if (UCS_PTR_IS_ERR(stat_ptr))
     {
         status = UCS_PTR_STATUS(stat_ptr);
