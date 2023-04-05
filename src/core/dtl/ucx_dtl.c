@@ -313,10 +313,25 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
     // Use 'ucp_worker_wait' to poll the worker until
     // the tag recv event that we're looking for comes in.
     FLUX_LOG_INFO (dtl_handle->h, "Starting UCP polling for incoming data\n");
-    do {
-        FLUX_LOG_INFO (dtl_handle->h, "Progress UCP worker\n");
-        ucp_worker_progress (dtl_handle->ucx_worker);
-        FLUX_LOG_INFO (dtl_handle->h, "Probe the UCP worker for messages on tag %lu\n", dtl_handle->comm_tag);
+    // do {
+    //     FLUX_LOG_INFO (dtl_handle->h, "Progress UCP worker\n");
+    //     ucp_worker_progress (dtl_handle->ucx_worker);
+    //     FLUX_LOG_INFO (dtl_handle->h, "Probe the UCP worker for messages on tag %lu\n", dtl_handle->comm_tag);
+    //     msg = ucp_tag_probe_nb(
+    //         dtl_handle->ucx_worker,
+    //         dtl_handle->comm_tag,
+    //         DYAD_UCX_TAG_MASK,
+    //         1, // Remove the message from UCP tracking
+    //         // Requires calling ucp_tag_msg_recv_nb
+    //         // with the ucp_tag_message_h to retrieve message
+    //         &msg_info
+    //     );
+    // } while (msg == NULL);
+    while (true)
+    {
+        // Probe the tag recv event at the top
+        // of the worker's queue
+        FLUX_LOG_INFO (dtl_handle->h, "Probe UCP worker with tag %lu\n", dtl_handle->comm_tag);
         msg = ucp_tag_probe_nb(
             dtl_handle->ucx_worker,
             dtl_handle->comm_tag,
@@ -326,48 +341,33 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
             // with the ucp_tag_message_h to retrieve message
             &msg_info
         );
-    } while (msg == NULL);
-    //while (true)
-    //{
-    //    // Probe the tag recv event at the top
-    //    // of the worker's queue
-    //    FLUX_LOG_INFO (dtl_handle->h, "Probe UCP worker with tag %lu\n", dtl_handle->comm_tag);
-    //    msg = ucp_tag_probe_nb(
-    //        dtl_handle->ucx_worker,
-    //        dtl_handle->comm_tag,
-    //        DYAD_UCX_TAG_MASK,
-    //        1, // Remove the message from UCP tracking
-    //        // Requires calling ucp_tag_msg_recv_nb
-    //        // with the ucp_tag_message_h to retrieve message
-    //        &msg_info
-    //    );
-    //    // If data has arrived from the producer plugin,
-    //    // break the loop
-    //    if (msg != NULL)
-    //    {
-    //        FLUX_LOG_INFO (dtl_handle->h, "Data has arrived, so end polling\n");
-    //        break;
-    //    }
-    //    // If data has not arrived, check if there are
-    //    // any other events in the worker's queue.
-    //    // If so, start the loop over to handle the next event
-    //    else if (ucp_worker_progress(dtl_handle->ucx_worker))
-    //    {
-    //        FLUX_LOG_INFO (dtl_handle->h, "Progressed UCP worker to check if any other UCP events are available\n");
-    //        continue;
-    //    }
-    //    // No other events are queued. So, we will wait on new
-    //    // events to come in. By using 'ucp_worker_wait' for this,
-    //    // we let the OS do other work in the meantime (no spin locking).
-    //    FLUX_LOG_INFO (dtl_handle->h, "Launch pre-emptable wait until UCP worker gets new events\n");
-    //    status = ucp_worker_wait(dtl_handle->ucx_worker);
-    //    // If the wait fails, log an error
-    //    if (UCX_STATUS_FAIL(status))
-    //    {
-    //        FLUX_LOG_ERR (dtl_handle->h, "Could not wait on the message from the producer plugin\n");
-    //        return DYAD_RC_UCXWAIT_FAIL;
-    //    }
-    //}
+        // If data has arrived from the producer plugin,
+        // break the loop
+        if (msg != NULL)
+        {
+            FLUX_LOG_INFO (dtl_handle->h, "Data has arrived, so end polling\n");
+            break;
+        }
+        // If data has not arrived, check if there are
+        // any other events in the worker's queue.
+        // If so, start the loop over to handle the next event
+        else if (ucp_worker_progress(dtl_handle->ucx_worker))
+        {
+            FLUX_LOG_INFO (dtl_handle->h, "Progressed UCP worker to check if any other UCP events are available\n");
+            continue;
+        }
+        // No other events are queued. So, we will wait on new
+        // events to come in. By using 'ucp_worker_wait' for this,
+        // we let the OS do other work in the meantime (no spin locking).
+        FLUX_LOG_INFO (dtl_handle->h, "Launch pre-emptable wait until UCP worker gets new events\n");
+        status = ucp_worker_wait(dtl_handle->ucx_worker);
+        // If the wait fails, log an error
+        if (UCX_STATUS_FAIL(status))
+        {
+            FLUX_LOG_ERR (dtl_handle->h, "Could not wait on the message from the producer plugin\n");
+            return DYAD_RC_UCXWAIT_FAIL;
+        }
+    }
     // The metadata retrived from the probed tag recv event contains
     // the size of the data to be sent.
     // So, use that size to allocate a buffer
