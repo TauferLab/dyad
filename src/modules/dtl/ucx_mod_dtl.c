@@ -231,7 +231,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     {
         FLUX_LOG_INFO (dtl_handle->h, "Waiting for send to complete\n");
         req = (mod_request_t*)stat_ptr;
-        while (req->completed == 0)
+        while (!req->completed)
         {
             ucp_worker_progress(dtl_handle->ucx_worker);
         }

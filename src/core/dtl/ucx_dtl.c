@@ -427,6 +427,7 @@ dyad_rc_t dyad_dtl_ucx_recv(dyad_dtl_ucx_t *dtl_handle,
         return DYAD_RC_UCXCOMM_FAIL;
     }
     FLUX_LOG_INFO (dtl_handle->h, "Data receive using UCX is successful\n");
+    FLUX_LOG_INFO (dtl_handle->h, "Received %lu bytes from producer\n", *buflen);
     return DYAD_RC_OK;
 }
 
