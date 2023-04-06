@@ -202,8 +202,8 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     ucp_request_param_t params;
     params.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK;
     params.cb.send = dyad_ucx_send_handler;
-    FLUX_LOG_INFO (dtl_handle->h, "Sending data to consumer with ucp_tag_send_sync_nbx\n");
-    stat_ptr = ucp_tag_send_sync_nbx(
+    FLUX_LOG_INFO (dtl_handle->h, "Sending data to consumer with ucp_tag_send_nbx\n");
+    stat_ptr = ucp_tag_send_nbx(
         dtl_handle->curr_ep,
         buf,
         buflen,
@@ -211,8 +211,8 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
         &params
     );
 #else
-    FLUX_LOG_INFO (dtl_handle->h, "Sending data to consumer with ucp_tag_send_sync_nb\n");
-    stat_ptr = ucp_tag_send_sync_nb(
+    FLUX_LOG_INFO (dtl_handle->h, "Sending data to consumer with ucp_tag_send_nb\n");
+    stat_ptr = ucp_tag_send_nb(
         dtl_handle->curr_ep,
         buf,
         buflen,
