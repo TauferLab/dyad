@@ -506,6 +506,9 @@ pull_done:
         flux_future_destroy (f);
         f = NULL;
     }
+    if (file_data != NULL) {
+        free(file_data);
+    }
     // If "check" is set and the operation was successful, set the
     // DYAD_CHECK_ENV environment variable to "ok"
     if (rc == DYAD_RC_OK && (ctx && ctx->check))
