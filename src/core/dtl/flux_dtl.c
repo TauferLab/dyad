@@ -48,9 +48,9 @@ dyad_rc_t dyad_dtl_flux_recv(dyad_dtl_flux_t *dtl_handle,
         void **buf, size_t *buflen)
 {
     int rc = 0;
-    errno = 0;
     const void** tmp_buf = NULL;
     int* tmp_buflen = NULL;
+    errno = 0;
     FLUX_LOG_INFO (dtl_handle->h, "Get file contents from module using RPC\n");
     rc = flux_rpc_get_raw(dtl_handle->f, tmp_buf, tmp_buflen);
     if (rc < 0)
