@@ -205,14 +205,13 @@ fetch_error:
     return;
 }
 
-static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode)
+static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode, bool debug)
 {
     dyad_mod_ctx_t *ctx = getctx (h);
     int rc = 0;
     char *e = NULL;
 
-    if ((e = getenv ("DYAD_MOD_DEBUG")) && atoi (e))
-        ctx->debug = true;
+    ctx->debug = debug;
     rc = dyad_mod_dtl_init (
         dtl_mode,
         h,
@@ -241,8 +240,9 @@ int mod_main (flux_t *h, int argc, char **argv)
 {
     const mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     dyad_mod_ctx_t *ctx = NULL;
-    size_t dtl_mode_len = 0;
+    size_t flag_len = 0;
     dyad_mod_dtl_mode_t dtl_mode = DYAD_DTL_FLUX_RPC;
+    bool debug = false;
 
     if (!h) {
         fprintf (stderr, "Failed to get flux handle\n");
@@ -261,11 +261,11 @@ int mod_main (flux_t *h, int argc, char **argv)
     (ctx->dyad_path) = argv[0];
     mkdir_as_needed (ctx->dyad_path, m);
 
-    if (argc >= 2) {
-        dtl_mode_len = strlen(argv[1]);
-        if (strncmp (argv[1], "FLUX_RPC", dtl_mode_len) == 0) {
+    if (argc == 2) {
+        flag_len = strlen(argv[1]);
+        if (strncmp (argv[1], "FLUX_RPC", flag_len) == 0) {
             dtl_mode = DYAD_DTL_FLUX_RPC;
-        } else if (strncmp (argv[1], "UCX", dtl_mode_len) == 0) {
+        } else if (strncmp (argv[1], "UCX", flag_len) == 0) {
             dtl_mode = DYAD_DTL_UCX;
         } else {
             FLUX_LOG_ERR (ctx->h, "Invalid DTL mode provided\n");
@@ -274,7 +274,16 @@ int mod_main (flux_t *h, int argc, char **argv)
         }
     }
 
-    if (dyad_open (h, dtl_mode) < 0) {
+    if (argc >= 3) {
+        flag_len = strlen (argv[2]);
+        if (strncmp (argv[2], "--debug", flag_len) == 0 || strncmp (argv[2], "-d", flag_len) == 0) {
+            debug = true;
+        } else {
+            debug = false;
+        }
+    }
+
+    if (dyad_open (h, dtl_mode, debug) < 0) {
         FLUX_LOG_ERR (ctx->h, "dyad_open failed");
         goto mod_error;
     }
