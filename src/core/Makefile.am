@@ -10,17 +10,17 @@ libdyad_core_la_SOURCES = \
 libdyad_core_la_LIBADD = \
     $(top_builddir)/src/utils/libutils.la \
 	$(top_builddir)/src/utils/libmurmur3.la \
-	$(UCX_LIBS) \
+	$(HG_LIBS) \
 	$(JANSSON_LIBS) \
 	$(FLUX_CORE_LIBS)
 libdyad_core_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-I$(top_srcdir)/src/utils \
 	-I$(top_srcdir)/src/utils/base64 \
-    $(UCX_CFLAGS) \
+    $(HG_CFLAGS) \
     $(JANSSON_CFLAGS) \
 	$(FLUX_CORE_CFLAGS)
-libdyad_core_la_LDFLAGS = -Wl,-rpath,'$(UCX_LIBDIR)' $(AM_LDFLAGS)
+libdyad_core_la_LDFLAGS = -Wl,-rpath,'$(HG_LIBDIR)' $(AM_LDFLAGS)
 if PERFFLOW
 libdyad_core_la_LIBADD += $(PERFFLOW_LIBS)
 libdyad_core_la_CPPFLAGS += $(PERFFLOW_PLUGIN_CPPFLAGS) $(PERFFLOW_CFLAGS) -DDYAD_PERFFLOW=1

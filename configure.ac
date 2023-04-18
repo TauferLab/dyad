@@ -102,19 +102,17 @@ AS_VAR_IF([$1], [""], [$5], [$4])dnl
 ########################
 # Check for the dl library (specifically, the "dlsym" function)
 AC_CHECK_LIB([dl], [dlsym])
-# Check for UCX v1.6.0 or higher (Required)
-# TODO: make UCX optional based on a new AC_ARG_ENABLE flag
-PKG_CHECK_MODULES([UCX],
-    [ucx >= 1.6.0]
+PKG_CHECK_MODULES([HG],
+    [mercury >= 1.0.0]
 )
-PKG_CHECK_VAR([UCX_LIBDIR],
-    [ucx >= 1.6.0],
+PKG_CHECK_VAR([HG_LIBDIR],
+    [mercury >= 1.0.0],
     [libdir],
     [],
-    [AC_MSG_FAILURE([Could not find libdir for UCX])]
+    [AC_MSG_FAILURE([Could not find libdir for Mercury])]
 )
-AS_IF([test "x$UCX_LIBDIR" = "x"],
-    [AC_MSG_FAILURE([check_var succeeded, but value is incorrect])]
+AS_IF([test "x$HG_LIBDIR" = "x"],
+      [AC_MSG_FAILURE([check_var succeeded, but value is incorrect])]
 )
 # Find and get info for Flux-Core using pkg-config
 AX_FLUX_CORE

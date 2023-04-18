@@ -14,17 +14,17 @@ dyad_la_LDFLAGS = \
 	-avoid-version \
 	-no-undefined \
 	-shared \
-    -Wl,-rpath,'$(UCX_LIBDIR)'
+    -Wl,-rpath,'$(HG_LIBDIR)'
 dyad_la_LIBADD = \
 	$(top_builddir)/src/utils/libutils.la \
-    $(UCX_LIBS) \
+    $(HG_LIBS) \
 	$(JANSSON_LIBS) \
 	$(FLUX_CORE_LIBS)
 dyad_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-I$(top_srcdir)/src/utils \
 	-I$(top_srcdir)/src/utils/base64 \
-	$(UCX_CFLAGS) \
+	$(HG_CFLAGS) \
 	$(JANSSON_CFLAGS) \
 	$(FLUX_CORE_CFLAGS)
 if PERFFLOW
