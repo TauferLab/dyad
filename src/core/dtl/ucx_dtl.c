@@ -170,7 +170,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     // Log an error if UCX initialization failed
     if (UCX_STATUS_FAIL(status))
     {
-        FLUX_LOG_ERR (h, "ucp_init failed!\n");
+        FLUX_LOG_ERR (h, "ucp_init failed (status = %d)\n", status);
         goto error;
     }
 
@@ -194,7 +194,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     );
     if (UCX_STATUS_FAIL(status))
     {
-        FLUX_LOG_ERR (h, "ucp_worker_create failed!\n");
+        FLUX_LOG_ERR (h, "ucp_worker_create failed (status = %d)!\n", status);
         goto error;
     }
 
@@ -207,7 +207,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     );
     if (UCX_STATUS_FAIL(status))
     {
-        FLUX_LOG_ERR (h, "Cannot get UCX worker address!\n");
+        FLUX_LOG_ERR (h, "Cannot get UCX worker address (status = %d)!\n", status);
         goto error;
     }
     (*dtl_handle)->consumer_address = worker_attrs.address;
