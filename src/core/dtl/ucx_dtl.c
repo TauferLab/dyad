@@ -121,6 +121,8 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
     (*dtl_handle)->kvs_namespace = kvs_namespace;
     (*dtl_handle)->ucx_ctx = NULL;
     (*dtl_handle)->ucx_worker = NULL;
+    (*dtl_handle)->consumer_address = NULL;
+    (*dtl_handle)->addr_len = 0;
 
     // Read the UCX configuration
     FLUX_LOG_INFO ((*dtl_handle)->h, "Reading UCP config\n");
