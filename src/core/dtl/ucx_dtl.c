@@ -467,6 +467,7 @@ dyad_rc_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
             FLUX_LOG_INFO (dtl_handle->h, "Releasing worker\n");
             ucp_worker_destroy(dtl_handle->ucx_worker);
             dtl_handle->ucx_worker = NULL;
+            FLUX_LOG_INFO (dtl_handle->h, "Worker released\n");
         }
         // Release context if not already released
         if (dtl_handle->ucx_ctx != NULL)
