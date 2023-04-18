@@ -446,15 +446,15 @@ dyad_rc_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
 {
     if (dtl_handle != NULL)
     {
-        // Flux handle should be released by the
-        // DYAD context, so it is not released here
-        dtl_handle->h = NULL;
+        FLUX_LOG_INFO (dtl_handle->h, "Finalizing UCX DTL\n");
+        FLUX_LOG_INFO (dtl_handle->h, "Releasing KVS Namespace\n");
         // KVS namespace string should be released by the
         // DYAD context, so it is not released here
         dtl_handle->kvs_namespace = NULL;
         // Release consumer address if not already released
         if (dtl_handle->consumer_address != NULL)
         {
+            FLUX_LOG_INFO (dtl_handle->h, "Releasing worker address\n");
             ucp_worker_release_address(
                 dtl_handle->ucx_worker,
                 dtl_handle->consumer_address
@@ -464,15 +464,21 @@ dyad_rc_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
         // Release worker if not already released
         if (dtl_handle->ucx_worker != NULL)
         {
+            FLUX_LOG_INFO (dtl_handle->h, "Releasing worker\n");
             ucp_worker_destroy(dtl_handle->ucx_worker);
             dtl_handle->ucx_worker = NULL;
         }
         // Release context if not already released
         if (dtl_handle->ucx_ctx != NULL)
         {
+            FLUX_LOG_INFO (dtl_handle->h, "Releasing context\n");
             ucp_cleanup(dtl_handle->ucx_ctx);
             dtl_handle->ucx_ctx = NULL;
         }
+        FLUX_LOG_INFO (dtl_handle->h, "Releasing Flux handle\n");
+        // Flux handle should be released by the
+        // DYAD context, so it is not released here
+        dtl_handle->h = NULL;
         // Free the handle and set to NULL to prevent double free
         free(dtl_handle);
         dtl_handle = NULL;
