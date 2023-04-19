@@ -4,8 +4,8 @@ libdyad_core_la_SOURCES = \
 	dtl/dyad_dtl.h \
 	dtl/flux_dtl.c \
 	dtl/flux_dtl.h \
-	dtl/ucx_dtl.c \
-	dtl/ucx_dtl.h \
+	dtl/mercury_dtl.c \
+	dtl/mercury_dtl.h \
 	dyad_core.c
 libdyad_core_la_LIBADD = \
     $(top_builddir)/src/utils/libutils.la \

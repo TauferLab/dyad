@@ -4,8 +4,8 @@ dyad_la_SOURCES = \
 	dtl/dyad_mod_dtl.h \
 	dtl/flux_mod_dtl.c \
 	dtl/flux_mod_dtl.h \
-	dtl/ucx_mod_dtl.c \
-	dtl/ucx_mod_dtl.h \
+	dtl/mercury_mod_dtl.c \
+	dtl/mercury_mod_dtl.h \
 	dyad.c \
 	dyad_flux_log.h
 dyad_la_LDFLAGS = \
