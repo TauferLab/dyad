@@ -1,6 +1,6 @@
 #include "dyad_mod_dtl.h"
 
-#include "ucx_mod_dtl.h"
+#include "mercury_mod_dtl.h"
 #include "flux_mod_dtl.h"
 
 struct dyad_mod_dtl {
@@ -21,12 +21,12 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode,
     }
     (*dtl_handle)->mode = mode;
     (*dtl_handle)->h = h;
-    if (mode == DYAD_DTL_UCX)
+    if (mode == DYAD_DTL_HG)
     {
-        return dyad_mod_ucx_dtl_init(
+        return dyad_mod_mercury_dtl_init(
             h,
             debug,
-            (dyad_mod_ucx_dtl_t**)&(*dtl_handle)->real_handle
+            (dyad_mod_mercury_dtl_t**)&(*dtl_handle)->real_handle
         );
     }
     if (mode == DYAD_DTL_FLUX_RPC)
@@ -44,10 +44,10 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode,
 int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
         const flux_msg_t *packed_obj, char **upath)
 {
-    if (dtl_handle->mode == DYAD_DTL_UCX)
+    if (dtl_handle->mode == DYAD_DTL_HG)
     {
-        return dyad_mod_ucx_dtl_rpc_unpack(
-            (dyad_mod_ucx_dtl_t*)dtl_handle->real_handle,
+        return dyad_mod_mercury_dtl_rpc_unpack(
+            (dyad_mod_mercury_dtl_t*)dtl_handle->real_handle,
             packed_obj,
             upath
         );
@@ -66,10 +66,10 @@ int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
 
 int dyad_mod_dtl_rpc_respond(dyad_mod_dtl_t *dtl_handle, const flux_msg_t *orig_msg)
 {
-    if (dtl_handle->mode == DYAD_DTL_UCX)
+    if (dtl_handle->mode == DYAD_DTL_HG)
     {
-        return dyad_mod_ucx_dtl_rpc_respond(
-            (dyad_mod_ucx_dtl_t*)dtl_handle->real_handle,
+        return dyad_mod_mercury_dtl_rpc_respond(
+            (dyad_mod_mercury_dtl_t*)dtl_handle->real_handle,
             orig_msg
         );
     }
@@ -86,10 +86,10 @@ int dyad_mod_dtl_rpc_respond(dyad_mod_dtl_t *dtl_handle, const flux_msg_t *orig_
 
 int dyad_mod_dtl_establish_connection(dyad_mod_dtl_t *dtl_handle)
 {
-    if (dtl_handle->mode == DYAD_DTL_UCX)
+    if (dtl_handle->mode == DYAD_DTL_HG)
     {
-        return dyad_mod_ucx_dtl_establish_connection(
-            (dyad_mod_ucx_dtl_t*)dtl_handle->real_handle
+        return dyad_mod_mercury_dtl_establish_connection(
+            (dyad_mod_mercury_dtl_t*)dtl_handle->real_handle
         );
     }
     if (dtl_handle->mode == DYAD_DTL_FLUX_RPC)
@@ -104,10 +104,10 @@ int dyad_mod_dtl_establish_connection(dyad_mod_dtl_t *dtl_handle)
 
 int dyad_mod_dtl_send(dyad_mod_dtl_t *dtl_handle, void *buf, size_t buflen)
 {
-    if (dtl_handle->mode == DYAD_DTL_UCX)
+    if (dtl_handle->mode == DYAD_DTL_HG)
     {
-        return dyad_mod_ucx_dtl_send(
-            (dyad_mod_ucx_dtl_t*)dtl_handle->real_handle,
+        return dyad_mod_mercury_dtl_send(
+            (dyad_mod_mercury_dtl_t*)dtl_handle->real_handle,
             buf,
             buflen
         );
@@ -126,10 +126,10 @@ int dyad_mod_dtl_send(dyad_mod_dtl_t *dtl_handle, void *buf, size_t buflen)
 
 int dyad_mod_dtl_close_connection(dyad_mod_dtl_t *dtl_handle)
 {
-    if (dtl_handle->mode == DYAD_DTL_UCX)
+    if (dtl_handle->mode == DYAD_DTL_HG)
     {
-        return dyad_mod_ucx_dtl_close_connection(
-            (dyad_mod_ucx_dtl_t*)dtl_handle->real_handle
+        return dyad_mod_mercury_dtl_close_connection(
+            (dyad_mod_mercury_dtl_t*)dtl_handle->real_handle
         );
     }
     if (dtl_handle->mode == DYAD_DTL_FLUX_RPC)
@@ -150,10 +150,10 @@ int dyad_mod_dtl_finalize(dyad_mod_dtl_t **dtl_handle)
     flux_t *h = (*dtl_handle)->h;
     void* real_handle = (*dtl_handle)->real_handle;
     free(*dtl_handle);
-    if (mode == DYAD_DTL_UCX)
+    if (mode == DYAD_DTL_HG)
     {
-        return dyad_mod_ucx_dtl_finalize(
-            (dyad_mod_ucx_dtl_t*)real_handle
+        return dyad_mod_mercury_dtl_finalize(
+            (dyad_mod_mercury_dtl_t*)real_handle
         );
     }
     if (mode == DYAD_DTL_FLUX_RPC)

@@ -14,7 +14,7 @@ typedef struct dyad_mod_dtl dyad_mod_dtl_t;
 
 enum dyad_mod_dtl_mode {
     DYAD_DTL_FLUX_RPC,
-    DYAD_DTL_UCX,
+    DYAD_DTL_HG,
     // TODO Figure out how to use Flux RPC
     // as a fallback for if UCX fails
     // DYAD_DTL_UCX_W_FALLBACK,

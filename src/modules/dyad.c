@@ -265,8 +265,8 @@ int mod_main (flux_t *h, int argc, char **argv)
         flag_len = strlen(argv[1]);
         if (strncmp (argv[1], "FLUX_RPC", flag_len) == 0) {
             dtl_mode = DYAD_DTL_FLUX_RPC;
-        } else if (strncmp (argv[1], "UCX", flag_len) == 0) {
-            dtl_mode = DYAD_DTL_UCX;
+        } else if (strncmp (argv[1], "HG", flag_len) == 0) {
+            dtl_mode = DYAD_DTL_HG;
         } else {
             FLUX_LOG_ERR (ctx->h, "Invalid DTL mode provided\n");
             usage();

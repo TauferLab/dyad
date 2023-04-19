@@ -23,7 +23,7 @@ struct dyad_dtl_mercury {
     // Data for current connection/transfer
     na_tag_t mercury_tag;
     na_mem_handle_t *remote_mem_handle;
-    na_addr_t *remote_addr;
+   na_addr_t *remote_addr;
     size_t data_size;
 };
 

@@ -735,8 +735,8 @@ dyad_rc_t dyad_init_env (dyad_ctx_t **ctx)
         dtl_mode_env_len = strlen (e);
         if (strncmp (e, "FLUX_RPC", dtl_mode_env_len) == 0) {
             dtl_mode = DYAD_DTL_FLUX_RPC;
-        } else if (strncmp (e, "UCX", dtl_mode_env_len) == 0) {
-            dtl_mode = DYAD_DTL_UCX;
+        } else if (strncmp (e, "HG", dtl_mode_env_len) == 0) {
+            dtl_mode = DYAD_DTL_HG;
         } else {
             printf ("Invalid DTL mode provided through %s. \
                     Defaulting the FLUX_RPC\n", DYAD_DTL_MODE_ENV);
