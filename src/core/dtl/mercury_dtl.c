@@ -20,7 +20,7 @@ struct mercury_cb_data {
 
 typedef struct mercury_cb_data mercury_cb_data_t;
 
-void dyad_dtl_get_cb(const struct na_cb_info *callback_info)
+int dyad_dtl_get_cb(const struct na_cb_info *callback_info)
 {
     mercury_cb_data_t *user_data = (mercury_cb_data_t*) (callback_info->arg);
     if (callback_info->type == NA_CB_GET) {
@@ -36,7 +36,7 @@ void dyad_dtl_get_cb(const struct na_cb_info *callback_info)
     }
 }
 
-void dyad_dtl_send_cb(const struct na_cb_info *callback_info)
+int dyad_dtl_send_cb(const struct na_cb_info *callback_info)
 {
     mercury_cb_data_t *user_data = (mercury_cb_data_t*) (callback_info->arg);
     if (callback_info->type == NA_CB_SEND_EXPECTED) {
@@ -60,7 +60,9 @@ int wait_on_mercury_op(dyad_dtl_mercury_t *dtl_handle,
         do {
             ret_code = NA_Trigger(
                 dtl_handle->mercury_ctx,
+                PROGRESS_TIMEOUT,
                 1,
+                NULL,
                 &count
             );
         } while ((ret_code == NA_SUCCESS) && count && !cb_data->completed);
@@ -121,7 +123,7 @@ dyad_rc_t dyad_dtl_mercury_init(flux_t *h, const char *kvs_namespace,
     }
     ret_code = NA_Addr_self(
         (*dtl_handle)->mercury_class,
-        &((*dtl_handle)->mercury_addr)
+        (*dtl_handle)->mercury_addr
     );
     if (ret_code != NA_SUCCESS) {
         FLUX_LOG_ERR (h, "Could not get Mercury address\n");
@@ -131,8 +133,6 @@ dyad_rc_t dyad_dtl_mercury_init(flux_t *h, const char *kvs_namespace,
     (*dtl_handle)->remote_mem_handle = NULL;
     (*dtl_handle)->remote_addr = NULL;
     (*dtl_handle)->data_size = 0;
-    (*dtl_handle)->get_id = NULL;
-    (*dtl_handle)->send_id = NULL;
 
     return DYAD_RC_OK;
 
@@ -152,7 +152,7 @@ dyad_rc_t dyad_dtl_mercury_rpc_pack(dyad_dtl_mercury_t *dtl_handle, const char *
 
     serialized_size = NA_Addr_get_serialize_size(
         dtl_handle->mercury_class,
-        dtl_handle->mercury_addr
+        *(dtl_handle->mercury_addr)
     );
     serialized_addr = malloc(serialized_size);
     if (serialized_addr == NULL) {
@@ -163,7 +163,7 @@ dyad_rc_t dyad_dtl_mercury_rpc_pack(dyad_dtl_mercury_t *dtl_handle, const char *
         dtl_handle->mercury_class,
         serialized_addr,
         serialized_size,
-        dtl_handle->mercury_addr
+        *(dtl_handle->mercury_addr)
     );
     if (ret_code != NA_SUCCESS) {
         FLUX_LOG_ERR (dtl_handle->h, "Cannot serialize Mercury address\n");
@@ -214,7 +214,7 @@ dyad_rc_t dyad_dtl_mercury_recv_rpc_response(dyad_dtl_mercury_t *dtl_handle,
     size_t handle_size = 0;
     na_return_t ret_code = NA_SUCCESS;
     rc = flux_rpc_get_unpack (
-        dtl_handle->h,
+        f,
         "{s:I, s:s%, s:s%}",
         "data_size",
         &(dtl_handle->data_size),
@@ -230,7 +230,7 @@ dyad_rc_t dyad_dtl_mercury_recv_rpc_response(dyad_dtl_mercury_t *dtl_handle,
     flux_future_reset(f);
     ret_code = NA_Addr_deserialize(
         dtl_handle->mercury_class,
-        &(dtl_handle->remote_addr),
+        dtl_handle->remote_addr,
         (const void*) serialized_addr,
         addr_size
     );
@@ -240,7 +240,7 @@ dyad_rc_t dyad_dtl_mercury_recv_rpc_response(dyad_dtl_mercury_t *dtl_handle,
     }
     ret_code = NA_Mem_handle_deserialize (
         dtl_handle->mercury_class,
-        &(dtl_handle->remote_mem_handle),
+        dtl_handle->remote_mem_handle,
         (const void*) serialized_handle,
         handle_size
     );
@@ -285,7 +285,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
         *buf,
         *buflen,
         NA_MEM_READWRITE, // TODO consider NA_MEM_READ_ONLY
-        &local_mem_handle
+        local_mem_handle
     );
     // If memory handle creation failed, error out
     if (ret_code != NA_SUCCESS) {
@@ -296,7 +296,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     // Register memory handle
     ret_code = NA_Mem_register(
         dtl_handle->mercury_class,
-        local_mem_handle,
+        *local_mem_handle,
         NA_MEM_TYPE_HOST,
         0
     );
@@ -309,8 +309,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     mem_registered = true;
     // Create Op ID for the Get
     get_id = NA_Op_create(
-        dtl_handle->mercury_class,
-        NA_OP_SINGLE
+        dtl_handle->mercury_class
     );
     // If ID creation failed, error out
     if (get_id == NULL) {
@@ -329,12 +328,12 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
         dtl_handle->mercury_ctx,
         dyad_dtl_get_cb,
         (void*)cb_arg,
-        local_mem_handle,
+        *local_mem_handle,
         0,
-        dtl_handle->remote_mem_handle,
+        *(dtl_handle->remote_mem_handle),
         0,
         dtl_handle->data_size,
-        dtl_handle->remote_addr,
+        *(dtl_handle->remote_addr),
         0,
         get_id
     );
@@ -366,7 +365,6 @@ send_ack:;
     send_msg = NA_Msg_buf_alloc(
         dtl_handle->mercury_class,
         sizeof(int),
-        0,
         &plugin_data
     );
     if (send_msg == NULL) {
@@ -377,8 +375,7 @@ send_ack:;
     memcpy(send_msg, &ack_response, sizeof(int));
     // Create Op ID for Send
     send_id = NA_Op_create(
-        dtl_handle->mercury_class,
-        NA_OP_SINGLE
+        dtl_handle->mercury_class
     );
     if (send_id == NULL) {
         FLUX_LOG_ERR (dtl_handle->h, "Cannot create Op ID for Mercury Send (ACK: %d)\n", ack_response);
@@ -391,10 +388,10 @@ send_ack:;
         dtl_handle->mercury_ctx,
         dyad_dtl_send_cb,
         (void*) cb_arg,
-        (const void*) &get_was_successful,
+        send_msg,
         sizeof(int),
         plugin_data,
-        dtl_handle->remote_addr,
+        *(dtl_handle->remote_addr),
         0,
         dtl_handle->mercury_tag,
         send_id
@@ -421,14 +418,14 @@ recv_cleanup:;
         if (mem_registered) {
             ret_code = NA_Mem_deregister(
                 dtl_handle->mercury_class,
-                local_mem_handle
+                *local_mem_handle
             );
             if (ret_code != NA_SUCCESS)
                 FLUX_LOG_ERR (dtl_handle->h, "Could not deregister memory\n");
         }
         NA_Mem_handle_free(
             dtl_handle->mercury_class,
-            local_mem_handle
+            *local_mem_handle
         );
         local_mem_handle = NULL;
     }
@@ -439,10 +436,10 @@ recv_cleanup:;
     if (cb_arg != NULL) {
         free(cb_arg);
     }
-    if (send_data != NULL || plugin_data != NULL) {
+    if (send_msg != NULL || plugin_data != NULL) {
         NA_Msg_buf_free(
             dtl_handle->mercury_class,
-            send_data,
+            send_msg,
             plugin_data
         );
     }
@@ -457,11 +454,11 @@ dyad_rc_t dyad_dtl_mercury_close_connection(dyad_dtl_mercury_t *dtl_handle)
 {
     dtl_handle->mercury_tag = 0;
     if (dtl_handle->remote_mem_handle != NULL) {
-        NA_Mem_handle_free(dtl_handle->mercury_class, dtl_handle->remote_mem_handle);
+        NA_Mem_handle_free(dtl_handle->mercury_class, *(dtl_handle->remote_mem_handle));
         dtl_handle->remote_mem_handle = NULL;
     }
     if (dtl_handle->remote_addr != NULL) {
-        NA_Addr_free(dtl_handle->mercury_class, dtl_handle->remote_addr);
+        NA_Addr_free(dtl_handle->mercury_class, *(dtl_handle->remote_addr));
         dtl_handle->remote_addr = NULL;
     }
     dtl_handle->data_size = 0;
@@ -480,7 +477,7 @@ dyad_rc_t dyad_dtl_mercury_finalize(dyad_dtl_mercury_t *dtl_handle)
         // DYAD context, so it is not released here
         dtl_handle->kvs_namespace = NULL;
         if (dtl_handle->mercury_addr != NULL) {
-            NA_Addr_free(dtl_handle->mercury_class, dtl_handle->mercury_addr);
+            NA_Addr_free(dtl_handle->mercury_class, *(dtl_handle->mercury_addr));
             dtl_handle->mercury_addr = NULL;
         }
         if (dtl_handle->mercury_ctx != NULL) {
