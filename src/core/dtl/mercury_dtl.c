@@ -89,15 +89,17 @@ int wait_on_mercury_op(dyad_dtl_mercury_t *dtl_handle,
 dyad_rc_t dyad_dtl_mercury_init(flux_t *h, const char *kvs_namespace,
         bool debug, dyad_dtl_mercury_t **dtl_handle)
 {
-    char *e = NULL;
-    char *mercury_info_str = NULL;
+    // TODO add ability to set network lib via env var
+    // char *e = NULL;
+    // char *mercury_info_str = NULL;
     na_return_t ret_code = NA_SUCCESS;
 
-    if ((e = getenv("DYAD_DTL_MERCURY_INFO_STRING"))) {
-        mercury_info_str = e;
-    } else {
-       mercury_info_str = "ucx+all";
-    }
+    // if ((e = getenv("DYAD_DTL_MERCURY_INFO_STRING"))) {
+    //     mercury_info_str = e;
+    // } else {
+    //    mercury_info_str = "ucx+all";
+    // }
+    char mercury_info_str[8] = "ucx+all";
     *dtl_handle = (dyad_dtl_mercury_t*) malloc(sizeof(struct dyad_dtl_mercury));
     if (*dtl_handle == NULL) {
         FLUX_LOG_ERR (h, "Could not allocate Mercury DTL context\n");
@@ -216,7 +218,7 @@ dyad_rc_t dyad_dtl_mercury_recv_rpc_response(dyad_dtl_mercury_t *dtl_handle,
     na_return_t ret_code = NA_SUCCESS;
     rc = flux_rpc_get_unpack (
         dtl_handle->h,
-        "{s:I, s:s%}",
+        "{s:I, s:s%, s:s%}",
         "data_size",
         &(dtl_handle->data_size),
         "mem_handle",
@@ -261,6 +263,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
         void **buf, size_t *buflen)
 {
     int rc = 0;
+    int ack_response = 0;
     bool mem_registered = false;
     void *send_msg = NULL;
     void *plugin_data = NULL;
@@ -277,7 +280,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     if (*buf == NULL) {
         FLUX_LOG_ERR (dtl_handle->h, "Could not allocate memory for file recv\n");
         dyad_ret_code = DYAD_RC_SYSFAIL;
-        goto recv_cleanup;
+        goto send_ack;
     }
     // Create a Mercury memory handle for the data
     ret_code = NA_Mem_handle_create(
@@ -291,7 +294,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     if (ret_code != NA_SUCCESS) {
         FLUX_LOG_ERR (dtl_handle->h, "Could not create local Mercury memory handle\n");
         dyad_ret_code = DYAD_RC_HG_OP_FAIL;
-        goto recv_cleanup;
+        goto send_ack;
     }
     // Register memory handle
     ret_code = NA_Mem_register(
@@ -304,7 +307,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     if (ret_code != NA_SUCCESS) {
         FLUX_LOG_ERR (dtl_handle->h, "Could not register local memory handle with Mercury\n");
         dyad_ret_code = DYAD_RC_HG_OP_FAIL;
-        goto recv_cleanup;
+        goto send_ack;
     }
     mem_registered = true;
     // Create Op ID for the Get
@@ -316,7 +319,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     if (get_id == NULL) {
         FLUX_LOG_ERR (dtl_handle->h, "Cannot create Op ID for Mercury Get\n");
         dyad_ret_code = DYAD_RC_HG_OP_FAIL;
-        goto recv_cleanup;
+        goto send_ack;
     }
     // Create a mercury_cb_data_t object to track completion of communication operation
     cb_arg = (mercury_cb_data_t*) malloc(sizeof(struct mercury_cb_data));
@@ -342,7 +345,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     if (ret_code != NA_SUCCESS) {
         FLUX_LOG_ERR (dtl_handle->h, "Cannot get data from module through Mercury\n");
         dyad_ret_code = DYAD_RC_HG_COMM_FAIL;
-        goto recv_cleanup;
+        goto send_ack;
     }
     // Wait for Get operation to complete, and error out if it fails
     rc = wait_on_mercury_op(dtl_handle, cb_arg);
@@ -350,12 +353,19 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
         FLUX_LOG_ERR (dtl_handle->h, "Failed to wait for data fetching (NA_Get) to complete\n");
         // TODO consider calling NA_Cancel here if needed
         dyad_ret_code = DYAD_RC_HG_COMM_FAIL;
-        goto recv_cleanup;
+        goto send_ack;
     }
+    free(cb_arg);
+    cb_arg = NULL;
+    dyad_ret_code = DYAD_RC_OK;
+
+send_ack:;
     // Setup data for notifying module of success
+    cb_arg = (mercury_cb_data_t*) malloc(sizeof(struct mercury_cb_data));
     cb_arg->completed = 0;
     cb_arg->good_type = 0;
     cb_arg->ret = NA_SUCCESS;
+    ack_response = (dyad_ret_code == DYAD_RC_OK) ? 1 : 0;
     send_msg = NA_Msg_buf_alloc(
         dtl_handle->mercury_class,
         sizeof(int),
@@ -363,17 +373,18 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
         &plugin_data
     );
     if (send_msg == NULL) {
-        FLUX_LOG_ERR (dtl_handle->h, "Cannot allocate response message\n");
+        FLUX_LOG_ERR (dtl_handle->h, "Cannot allocate response message (ACK: %d)\n", ack_response);
         dyad_ret_code = DYAD_RC_HG_OP_FAIL;
         goto recv_cleanup;
     }
+    memcpy(send_msg, &ack_response, sizeof(int));
     // Create Op ID for Send
     send_id = NA_Op_create(
         dtl_handle->mercury_class,
         NA_OP_SINGLE
     );
     if (send_id == NULL) {
-        FLUX_LOG_ERR (dtl_handle->h, "Cannot create Op ID for Mercury Send\n");
+        FLUX_LOG_ERR (dtl_handle->h, "Cannot create Op ID for Mercury Send (ACK: %d)\n", ack_response);
         dyad_ret_code = DYAD_RC_HG_OP_FAIL;
         goto recv_cleanup;
     }
@@ -392,18 +403,17 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
         send_id
     );
     if (ret_code != NA_SUCCESS) {
-        FLUX_LOG_ERR (dtl_handle->h, "Cannot send response to module through Mercury\n");
+        FLUX_LOG_ERR (dtl_handle->h, "Cannot send response to module through Mercury (ACK: %d)\n", ack_response);
         dyad_ret_code = DYAD_RC_HG_COMM_FAIL;
         goto recv_cleanup;
     }
     rc = wait_on_mercury_op(dtl_handle, cb_arg);
     if (rc != 0) {
-        FLUX_LOG_ERR (dtl_handle->h, "Failed to wait for response (NA_Msg_send_expected) to complete\n");
+        FLUX_LOG_ERR (dtl_handle->h, "Failed to wait for response (NA_Msg_send_expected) to complete (ACK: %d)\n", ack_response);
         // TODO consider calling NA_Cancel here if needed
         dyad_ret_code = DYAD_RC_HG_COMM_FAIL;
         goto recv_cleanup;
     }
-    dyad_ret_code = DYAD_RC_OK;
 
 recv_cleanup:;
     if (*buf != NULL) {
