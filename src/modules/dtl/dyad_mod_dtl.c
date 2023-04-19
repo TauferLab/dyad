@@ -23,6 +23,7 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode,
     (*dtl_handle)->h = h;
     if (mode == DYAD_DTL_UCX)
     {
+        FLUX_LOG_INFO (h, "Initializing UCX DTL!\n");
         return dyad_mod_ucx_dtl_init(
             h,
             debug,
@@ -31,6 +32,7 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode,
     }
     if (mode == DYAD_DTL_FLUX_RPC)
     {
+        FLUX_LOG_INFO (h, "Initializing Flux RPC DTL!\n");
         return dyad_mod_flux_dtl_init(
             h,
             debug,
