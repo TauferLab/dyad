@@ -69,6 +69,11 @@ int dyad_mod_mercury_dtl_init(flux_t *h, bool debug, dyad_mod_mercury_dtl_t **dt
         FLUX_LOG_ERR (h, "Could not allocate context for Mercury DTL\n");
         return -1;
     }
+    if (debug) {
+        NA_Set_log_level("debug");
+    } else {
+        NA_Set_log_level("warning");
+    }
     (*dtl_handle)->h = h;
     (*dtl_handle)->mercury_class = NA_Initialize(
         mercury_info_str,
