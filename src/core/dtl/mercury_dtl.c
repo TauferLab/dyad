@@ -34,6 +34,7 @@ int dyad_dtl_get_cb(const struct na_cb_info *callback_info)
     } else {
         user_data->completed = 0;
     }
+    return 0;
 }
 
 int dyad_dtl_send_cb(const struct na_cb_info *callback_info)
@@ -48,6 +49,7 @@ int dyad_dtl_send_cb(const struct na_cb_info *callback_info)
     if (callback_info->ret == NA_SUCCESS) {
         user_data->completed = 1;
     }
+    return 0;
 }
 
 int wait_on_mercury_op(dyad_dtl_mercury_t *dtl_handle,
