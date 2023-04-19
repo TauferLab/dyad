@@ -104,7 +104,7 @@ dyad_rc_t dyad_dtl_mercury_init(flux_t *h, const char *kvs_namespace,
     *dtl_handle = (dyad_dtl_mercury_t*) malloc(sizeof(struct dyad_dtl_mercury));
     if (*dtl_handle == NULL) {
         FLUX_LOG_ERR (h, "Could not allocate Mercury DTL context\n");
-        goto error;
+        return DYAD_RC_SYSFAIL;
     }
     (*dtl_handle)->h = h;
     (*dtl_handle)->kvs_namespace = kvs_namespace;

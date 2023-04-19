@@ -67,7 +67,7 @@ int dyad_mod_mercury_dtl_init(flux_t *h, bool debug, dyad_mod_mercury_dtl_t **dt
     *dtl_handle = (dyad_mod_mercury_dtl_t*) malloc(sizeof(struct dyad_mod_mercury_dtl));
     if (*dtl_handle == NULL) {
         FLUX_LOG_ERR (h, "Could not allocate context for Mercury DTL\n");
-        goto hg_init_error;
+        return -1;
     }
     (*dtl_handle)->h = h;
     (*dtl_handle)->mercury_class = NA_Initialize(
