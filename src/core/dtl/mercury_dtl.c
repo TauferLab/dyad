@@ -109,6 +109,7 @@ dyad_rc_t dyad_dtl_mercury_init(flux_t *h, const char *kvs_namespace,
     NA_Set_log_level("debug");
     (*dtl_handle)->h = h;
     (*dtl_handle)->kvs_namespace = kvs_namespace;
+    *((*dtl_handle)->mercury_addr) = NA_ADDR_NULL;
     (*dtl_handle)->mercury_class = NA_Initialize(
         mercury_info_str,
         false
@@ -133,8 +134,8 @@ dyad_rc_t dyad_dtl_mercury_init(flux_t *h, const char *kvs_namespace,
         goto error;
     }
     (*dtl_handle)->mercury_tag = 0;
-    (*dtl_handle)->remote_mem_handle = NULL;
-    (*dtl_handle)->remote_addr = NULL;
+    *((*dtl_handle)->remote_mem_handle) = NA_ADDR_NULL;
+    *((*dtl_handle)->remote_addr) = NA_MEM_HANDLE_NULL;
     (*dtl_handle)->data_size = 0;
 
     return DYAD_RC_OK;
@@ -268,7 +269,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     void *send_msg = NULL;
     void *plugin_data = NULL;
     dyad_rc_t dyad_ret_code = DYAD_RC_OK;
-    na_mem_handle_t *local_mem_handle = NULL;
+    na_mem_handle_t local_mem_handle = NA_MEM_HANDLE_NULL;
     na_op_id_t *get_id = NULL;
     na_op_id_t *send_id = NULL;
     na_return_t ret_code = NA_SUCCESS;
@@ -299,7 +300,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     // Register memory handle
     ret_code = NA_Mem_register(
         dtl_handle->mercury_class,
-        *local_mem_handle
+        local_mem_handle
     );
     // If handle registration failed, error out
     if (ret_code != NA_SUCCESS) {
@@ -329,7 +330,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
         dtl_handle->mercury_ctx,
         dyad_dtl_get_cb,
         (void*)cb_arg,
-        *local_mem_handle,
+        local_mem_handle,
         0,
         *(dtl_handle->remote_mem_handle),
         0,
@@ -415,20 +416,20 @@ recv_cleanup:;
         free(*buf);
         *buf = NULL;
     }
-    if (local_mem_handle != NULL) {
+    if (local_mem_handle != NA_MEM_HANDLE_NULL) {
         if (mem_registered) {
             ret_code = NA_Mem_deregister(
                 dtl_handle->mercury_class,
-                *local_mem_handle
+                local_mem_handle
             );
             if (ret_code != NA_SUCCESS)
                 FLUX_LOG_ERR (dtl_handle->h, "Could not deregister memory\n");
         }
         NA_Mem_handle_free(
             dtl_handle->mercury_class,
-            *local_mem_handle
+            local_mem_handle
         );
-        local_mem_handle = NULL;
+        local_mem_handle = NA_MEM_HANDLE_NULL;
     }
     if (get_id != NULL) {
         NA_Op_destroy(dtl_handle->mercury_class, get_id);
@@ -454,13 +455,13 @@ recv_cleanup:;
 dyad_rc_t dyad_dtl_mercury_close_connection(dyad_dtl_mercury_t *dtl_handle)
 {
     dtl_handle->mercury_tag = 0;
-    if (dtl_handle->remote_mem_handle != NULL) {
+    if (*(dtl_handle->remote_mem_handle) != NA_MEM_HANDLE_NULL) {
         NA_Mem_handle_free(dtl_handle->mercury_class, *(dtl_handle->remote_mem_handle));
-        dtl_handle->remote_mem_handle = NULL;
+        *(dtl_handle->remote_mem_handle) = NA_MEM_HANDLE_NULL;
     }
-    if (dtl_handle->remote_addr != NULL) {
+    if (*(dtl_handle->remote_addr) != NA_ADDR_NULL) {
         NA_Addr_free(dtl_handle->mercury_class, *(dtl_handle->remote_addr));
-        dtl_handle->remote_addr = NULL;
+        *(dtl_handle->remote_addr) = NA_ADDR_NULL;
     }
     dtl_handle->data_size = 0;
     return DYAD_RC_OK;
@@ -477,9 +478,9 @@ dyad_rc_t dyad_dtl_mercury_finalize(dyad_dtl_mercury_t *dtl_handle)
         // KVS namespace string should be released by the
         // DYAD context, so it is not released here
         dtl_handle->kvs_namespace = NULL;
-        if (dtl_handle->mercury_addr != NULL) {
+        if (*(dtl_handle->mercury_addr) != NA_ADDR_NULL) {
             NA_Addr_free(dtl_handle->mercury_class, *(dtl_handle->mercury_addr));
-            dtl_handle->mercury_addr = NULL;
+            *(dtl_handle->mercury_addr) = NA_ADDR_NULL;
         }
         if (dtl_handle->mercury_ctx != NULL) {
             NA_Context_destroy(dtl_handle->mercury_class, dtl_handle->mercury_ctx);
