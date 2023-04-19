@@ -35,7 +35,9 @@ int wait_on_mercury_op(dyad_mod_mercury_dtl_t *dtl_handle,
         do {
             ret_code = NA_Trigger(
                 dtl_handle->mercury_ctx,
+                PROGRESS_TIMEOUT,
                 1,
+                NULL,
                 &count
             );
         } while ((ret_code == NA_SUCCESS) && count && !cb_data->completed);
@@ -80,7 +82,7 @@ int dyad_mod_mercury_dtl_init(flux_t *h, bool debug, dyad_mod_mercury_dtl_t **dt
         (*dtl_handle)->mercury_class
     );
     if ((*dtl_handle)->mercury_ctx == NULL) {
-        FLUX_LOG_ERROR (h, "Could not initialize Mercury context\n");
+        FLUX_LOG_ERR (h, "Could not initialize Mercury context\n");
         goto hg_init_error;
     }
     ret_code = NA_Addr_self(
