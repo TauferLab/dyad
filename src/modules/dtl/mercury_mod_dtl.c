@@ -63,7 +63,7 @@ int wait_on_mercury_op(dyad_mod_mercury_dtl_t *dtl_handle,
 int dyad_mod_mercury_dtl_init(flux_t *h, bool debug, dyad_mod_mercury_dtl_t **dtl_handle)
 {
     na_return_t ret_code = NA_SUCCESS;
-    char mercury_info_str[8] = "ofi+tcp";
+    char mercury_info_str[8] = "ofi+verbs";
     *dtl_handle = (dyad_mod_mercury_dtl_t*) malloc(sizeof(struct dyad_mod_mercury_dtl));
     if (*dtl_handle == NULL) {
         FLUX_LOG_ERR (h, "Could not allocate context for Mercury DTL\n");
@@ -95,7 +95,7 @@ int dyad_mod_mercury_dtl_init(flux_t *h, bool debug, dyad_mod_mercury_dtl_t **dt
         (*dtl_handle)->mercury_addr
     );
     if (ret_code != NA_SUCCESS) {
-        FLUX_LOG_ERR (h, "Could not get Mercury address\n");
+        FLUX_LOG_ERR (h, "Could not get Mercury address (code: %d)\n", ret_code);
         goto hg_init_error;
     }
     (*dtl_handle)->rpc_msg = NULL;
