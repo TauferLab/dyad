@@ -1,7 +1,4 @@
 #include "mercury_dtl.h"
-#include <cstdlib>
-
-#include "dyad_rc.h"
 
 #ifdef __cplusplus
 #include <cstdint>
