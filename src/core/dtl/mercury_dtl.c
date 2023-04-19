@@ -106,11 +106,7 @@ dyad_rc_t dyad_dtl_mercury_init(flux_t *h, const char *kvs_namespace,
         FLUX_LOG_ERR (h, "Could not allocate Mercury DTL context\n");
         return DYAD_RC_SYSFAIL;
     }
-    if (debug) {
-        NA_Set_log_level("debug");
-    } else {
-        NA_Set_log_level("warning");
-    }
+    NA_Set_log_level("debug");
     (*dtl_handle)->h = h;
     (*dtl_handle)->kvs_namespace = kvs_namespace;
     (*dtl_handle)->mercury_class = NA_Initialize(
