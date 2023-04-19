@@ -298,9 +298,7 @@ dyad_rc_t dyad_dtl_mercury_recv(dyad_dtl_mercury_t *dtl_handle,
     // Register memory handle
     ret_code = NA_Mem_register(
         dtl_handle->mercury_class,
-        *local_mem_handle,
-        NA_MEM_TYPE_HOST,
-        0
+        *local_mem_handle
     );
     // If handle registration failed, error out
     if (ret_code != NA_SUCCESS) {

@@ -214,9 +214,7 @@ int dyad_mod_mercury_dtl_send(dyad_mod_mercury_dtl_t *dtl_handle, void *buf, siz
     }
     ret_code = NA_Mem_register(
         dtl_handle->mercury_class,
-        *local_mem_handle,
-        NA_MEM_TYPE_HOST,
-        0
+        *local_mem_handle
     );
     if (ret_code != NA_SUCCESS) {
         FLUX_LOG_ERR (dtl_handle->h, "Could not register local memory handle with Mercury\n");
