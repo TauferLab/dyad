@@ -24,11 +24,13 @@ dyad_rc_t dyad_dtl_init(dyad_dtl_mode_t mode, flux_t *h,
     (*dtl_handle)->mode = mode;
     (*dtl_handle)->h = h;
     if (mode == DYAD_DTL_UCX) {
+        FLUX_LOG_INFO (h, "Initializing UCX DTL\n");
         return dyad_dtl_ucx_init (h, kvs_namespace, debug,
                 (dyad_dtl_ucx_t**)&(*dtl_handle)->real_dtl_handle);
     }
     if (mode == DYAD_DTL_FLUX_RPC)
     {
+        FLUX_LOG_INFO (h, "Initializing Flux RPC DTL\n");
         return dyad_dtl_flux_init (h, kvs_namespace, debug,
                 (dyad_dtl_flux_t**)&(*dtl_handle)->real_dtl_handle);
     }
