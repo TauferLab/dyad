@@ -263,7 +263,7 @@ int mod_main (flux_t *h, int argc, char **argv)
     (ctx->dyad_path) = argv[0];
     mkdir_as_needed (ctx->dyad_path, m);
 
-    if (argc == 2) {
+    if (argc >= 2) {
         FLUX_LOG_INFO (h, "DTL Mode (from cmd line) is %s\n", argv[1]);
         flag_len = strlen(argv[1]);
         if (strncmp (argv[1], "FLUX_RPC", flag_len) == 0) {
