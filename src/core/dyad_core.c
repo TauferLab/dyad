@@ -424,13 +424,15 @@ get_done:;
     // If everything went well in the module, this last message will set errno to ENODATA (i.e., end of stream).
     // Otherwise, something went wrong, so we'll return DYAD_RC_BADRPC.
     if (rc != DYAD_RC_RPC_FINISHED && rc != DYAD_RC_BADRPC) {
+        DYAD_LOG_INFO (ctx, "Wait for end-of-stream message from module\n");
         if (flux_future_get (f, NULL) < 0 && errno == ENODATA) {
             DYAD_LOG_ERR (ctx, "Received end-of-stream message (ENODATA) from module\n");
         } else {
             DYAD_LOG_ERR (ctx, "An error occured at end of getting data! Either the module sent too many responses, or the module failed with a bad error (errno = %d)\n", errno);
-            return DYAD_RC_BADRPC;
+            rc = DYAD_RC_BADRPC;
         }
     }
+    DYAD_LOG_INFO (ctx, "Destroy the Flux future for the RPC\n");
     flux_future_destroy (f);
     return rc;
 }
