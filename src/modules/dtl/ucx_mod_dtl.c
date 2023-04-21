@@ -297,7 +297,7 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
                 }
                 if (UCX_CHECK(status))
                 {
-                    FLUX_LOG_ERR(dtl_handle->h, "Could not successfully close Endpoint! However, endpoint was released.\n");
+                    FLUX_LOG_ERR(dtl_handle->h, "Could not successfully close Endpoint (status = %d)! However, endpoint was released.\n", status);
                 }
             }
             dtl_handle->curr_ep = NULL;
