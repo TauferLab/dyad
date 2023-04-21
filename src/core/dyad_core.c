@@ -453,13 +453,12 @@ static inline dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
     char file_path_copy[PATH_MAX + 1];
     mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     size_t written_len = 0;
-    flux_future_t* f = NULL;
     memset (file_path, 0, PATH_MAX + 1);
     memset (file_path_copy, 0, PATH_MAX + 1);
 
     // Call dyad_get_data to dispatch a RPC to the producer's Flux broker
     // and retrieve the data associated with the file
-    rc = dyad_get_data (ctx, kvs_data, &file_data, &file_len, &f);
+    rc = dyad_get_data (ctx, kvs_data, &file_data, &file_len);
     if (DYAD_IS_ERROR(rc)) {
         goto pull_done;
     }
@@ -505,10 +504,6 @@ static inline dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
 
 pull_done:
     // Destroy the Flux future for the RPC, if needed
-    if (f != NULL) {
-        flux_future_destroy (f);
-        f = NULL;
-    }
     if (file_data != NULL) {
         free(file_data);
     }
