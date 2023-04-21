@@ -317,25 +317,25 @@ fetch_done:;
     return rc;
 }
 
-static inline dyad_rc_t process_remaining_rpc_msgs (const dyad_ctx_t* ctx, flux_future_t* f)
-{
-    DYAD_LOG_INFO (ctx, "In process_remaining_rpc_msgs\n");
-    int rc = 0;
-    while (true) {
-        if ((rc = flux_rpc_get (f, NULL)) < 0) {
-            DYAD_LOG_INFO(ctx, "flux_rpc_get returned < 0 (rc = %d)\n", rc);
-            if (errno == ENODATA) {
-                DYAD_LOG_INFO (ctx, "Reached end of RPC stream from module");
-                return DYAD_RC_OK;
-            } else {
-                DYAD_LOG_ERR (ctx, "An error occured in the DYAD module\n");
-                return DYAD_RC_BADRPC;
-            }
-        }
-        DYAD_LOG_INFO(ctx, "flux_rpc_get returned >= 0 (rc = %d)\n", rc);
-        flux_future_reset (f);
-    }
-}
+// static inline dyad_rc_t process_remaining_rpc_msgs (const dyad_ctx_t* ctx, flux_future_t* f)
+// {
+//     DYAD_LOG_INFO (ctx, "In process_remaining_rpc_msgs\n");
+//     int rc = 0;
+//     while (true) {
+//         if ((rc = flux_rpc_get (f, NULL)) < 0) {
+//             DYAD_LOG_INFO(ctx, "flux_rpc_get returned < 0 (rc = %d)\n", rc);
+//             if (errno == ENODATA) {
+//                 DYAD_LOG_INFO (ctx, "Reached end of RPC stream from module");
+//                 return DYAD_RC_OK;
+//             } else {
+//                 DYAD_LOG_ERR (ctx, "An error occured in the DYAD module\n");
+//                 return DYAD_RC_BADRPC;
+//             }
+//         }
+//         DYAD_LOG_INFO(ctx, "flux_rpc_get returned >= 0 (rc = %d)\n", rc);
+//         flux_future_reset (f);
+//     }
+// }
 
 #if DYAD_PERFFLOW
 __attribute__ ((annotate ("@critical_path()")))
@@ -343,19 +343,18 @@ static dyad_rc_t dyad_get_data (
     const dyad_ctx_t* ctx,
     const dyad_kvs_response_t* restrict kvs_data,
     const char** file_data,
-    size_t* file_len,
-    flux_future_t** f)
+    size_t* file_len)
 #else
 static inline dyad_rc_t dyad_get_data (
     const dyad_ctx_t* ctx,
     const dyad_kvs_response_t* restrict kvs_data,
     const char** file_data,
-    size_t* file_len,
-    flux_future_t** f)
+    size_t* file_len)
 #endif
 {
     dyad_rc_t rc = DYAD_RC_OK;
     dyad_rc_t final_rc = DYAD_RC_OK;
+    flux_future_t *f;
     json_t* rpc_payload;
     DYAD_LOG_INFO (ctx, "Packing payload for RPC to DYAD module");
     rc = dyad_dtl_rpc_pack (
@@ -370,7 +369,7 @@ static inline dyad_rc_t dyad_get_data (
         goto get_done;
     }
     DYAD_LOG_INFO (ctx, "Sending payload for RPC to DYAD module");
-    *f = flux_rpc_pack (
+    f = flux_rpc_pack (
         ctx->h,
         "dyad.fetch",
         kvs_data->owner_rank,
@@ -378,14 +377,14 @@ static inline dyad_rc_t dyad_get_data (
         "o",
         rpc_payload
     );
-    if (*f == NULL)
+    if (f == NULL)
     {
         DYAD_LOG_ERR(ctx, "Cannot send RPC to producer module\n");
         rc = DYAD_RC_BADRPC;
         goto get_done;
     }
     DYAD_LOG_INFO (ctx, "Receive RPC response from DYAD module");
-    rc = dyad_dtl_recv_rpc_response(ctx->dtl_handle, *f);
+    rc = dyad_dtl_recv_rpc_response(ctx->dtl_handle, f);
     if (DYAD_IS_ERROR(rc))
     {
         DYAD_LOG_ERR(ctx, "Cannot receive and/or parse the RPC response\n");
@@ -416,20 +415,24 @@ static inline dyad_rc_t dyad_get_data (
     rc = DYAD_RC_OK;
 
 get_done:;
-    final_rc = rc;
-    // Will process all remaining messages from DYAD module and check errno
-    // for the first error message. This should only check a single message because
-    // it is expected that the DTL will process any non-error messages expected by this point.
-    // If errno is ENODATA, then the module exited sucessfully. So, this function
-    // returns DYAD_RC_OK. If errno is any other value, then an error occured in the
-    // DYAD module. So, we return DYAD_RC_BADRPC.
-    if (final_rc != DYAD_RC_RPC_FINISHED && final_rc != DYAD_RC_BADRPC) {
-        DYAD_LOG_INFO (ctx, "Process any outstanding RPC messages to check if the module failed with an error");
-        rc = process_remaining_rpc_msgs (ctx, *f);
+    // There are two return codes that have special meaning when coming from the DTL:
+    //  * DYAD_RC_RPC_FINISHED: occurs when an ENODATA error occurs
+    //  * DYAD_RC_BADRPC: occurs when a previous RPC operation fails
+    // In either of these cases, we do not need to wait for the end of stream because
+    // the RPC is already completely messed up.
+    // If we do not have either of these cases, we will wait for one more RPC message.
+    // If everything went well in the module, this last message will set errno to ENODATA (i.e., end of stream).
+    // Otherwise, something went wrong, so we'll return DYAD_RC_BADRPC.
+    if (rc != DYAD_RC_RPC_FINISHED && rc != DYAD_RC_BADRPC) {
+        if (flux_future_get (*f, NULL) < 0 && errno == ENODATA) {
+            DYAD_LOG_ERR (ctx, "Received end-of-stream message (ENODATA) from module\n");
+        } else {
+            DYAD_LOG_ERR (ctx, "An error occured at end of getting data! Either the module sent too many responses, or the module failed with a bad error (errno = %d)\n", errno);
+            return DYAD_RC_BADRPC;
+        }
     }
-    if (final_rc == DYAD_RC_OK)
-        return rc;
-    return final_rc;
+    flux_future_destroy (f);
+    return rc;
 }
 
 #if DYAD_PERFFLOW

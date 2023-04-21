@@ -48,11 +48,11 @@ dyad_rc_t dyad_dtl_flux_recv(dyad_dtl_flux_t *dtl_handle,
         void **buf, size_t *buflen)
 {
     int rc = 0;
-    const void** tmp_buf = NULL;
-    int* tmp_buflen = NULL;
+    void* tmp_buf = NULL;
+    size_t tmp_buflen = 0;
     errno = 0;
     FLUX_LOG_INFO (dtl_handle->h, "Get file contents from module using RPC\n");
-    rc = flux_rpc_get_raw(dtl_handle->f, tmp_buf, tmp_buflen);
+    rc = flux_rpc_get_raw(dtl_handle->f, (const void**) &tmp_buf, (int*) &tmp_buflen);
     if (rc < 0)
     {
         FLUX_LOG_ERR (dtl_handle->h, "Could not get file data from Flux RPC\n");
@@ -60,9 +60,9 @@ dyad_rc_t dyad_dtl_flux_recv(dyad_dtl_flux_t *dtl_handle,
             return DYAD_RC_RPC_FINISHED;
         return DYAD_RC_BADRPC;
     }
-    *buflen = (size_t) *tmp_buflen;
+    *buflen = tmp_buflen;
     *buf = malloc(*buflen);
-    memcpy(*buf, *tmp_buf, *buflen);
+    memcpy(*buf, tmp_buf, *buflen);
     flux_future_reset (dtl_handle->f);
     return DYAD_RC_OK;
 }
