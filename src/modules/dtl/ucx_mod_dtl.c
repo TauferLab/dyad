@@ -33,6 +33,11 @@ static void dyad_ucx_send_handler(void *req, ucs_status_t status)
     real_req->completed = 1;
 }
 
+void dyad_mod_ucx_ep_err_handler (void *arg, ucp_ep_h ep, ucs_status_t status) {
+    flux_t *h = (flux_t*)arg;
+    FLUX_LOG_ERR (h, "An error occured on the UCP endpoint (status = %d)\n", status);
+}
+
 int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle)
 {
     ucp_params_t ucp_params;
@@ -163,10 +168,12 @@ int dyad_mod_ucx_dtl_establish_connection(dyad_mod_ucx_dtl_t *dtl_handle)
     ucp_ep_params_t params;
     ucs_status_t status = UCS_OK;
     params.field_mask = UCP_EP_PARAM_FIELD_REMOTE_ADDRESS |
-        UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE;
+        UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE |
+        UCP_EP_PARAM_ERR_HANDLER;
     params.address = dtl_handle->curr_cons_addr;
-    params.err_mode = UCP_ERR_HANDLING_MODE_NONE; // TODO decide if we want to enable
-                                                  // UCX endpoint error handling
+    params.err_mode = UCP_ERR_HANDLING_MODE_PEER;
+    params.err_handler.cb = dyad_mod_ucx_ep_err_handler;
+    params.err_handler.args = (void*) dtl_handle->h;
     FLUX_LOG_INFO (dtl_handle->h, "Create UCP endpoint for communication with consumer\n");
     status = ucp_ep_create(
         dtl_handle->ucx_worker,
@@ -269,11 +276,11 @@ int dyad_mod_ucx_dtl_close_connection(dyad_mod_ucx_dtl_t *dtl_handle)
 #if UCP_API_VERSION >= UCP_VERSION(1, 10)
             ucp_request_param_t close_params;
             close_params.op_attr_mask = UCP_OP_ATTR_FIELD_FLAGS;
-            close_params.flags = 0; // TODO change if we decide to enable err handling mode
+            close_params.flags = UCP_EP_CLOSE_FLAG_FORCE;
             stat_ptr = ucp_ep_close_nbx(dtl_handle->curr_ep, &close_params);
 #else
             // TODO change to FORCE if we decide to enable err handleing mode
-            stat_ptr = ucp_ep_close_nb(dtl_handle->curr_ep, UCP_EP_CLOSE_MODE_FLUSH);
+            stat_ptr = ucp_ep_close_nb(dtl_handle->curr_ep, UCP_EP_CLOSE_MODE_FORCE);
 #endif
             FLUX_LOG_INFO (dtl_handle->h, "Wait for endpoint closing to finish\n");
             if (stat_ptr != NULL)
