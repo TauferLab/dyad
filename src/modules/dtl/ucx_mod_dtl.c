@@ -169,7 +169,7 @@ int dyad_mod_ucx_dtl_establish_connection(dyad_mod_ucx_dtl_t *dtl_handle)
     ucs_status_t status = UCS_OK;
     params.field_mask = UCP_EP_PARAM_FIELD_REMOTE_ADDRESS |
         UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE |
-        UCP_EP_PARAM_ERR_HANDLER;
+        UCP_EP_PARAM_FIELD_ERR_HANDLER;
     params.address = dtl_handle->curr_cons_addr;
     params.err_mode = UCP_ERR_HANDLING_MODE_PEER;
     params.err_handler.cb = dyad_mod_ucx_ep_err_handler;
