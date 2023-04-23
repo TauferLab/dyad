@@ -173,7 +173,7 @@ int dyad_mod_ucx_dtl_establish_connection(dyad_mod_ucx_dtl_t *dtl_handle)
     params.address = dtl_handle->curr_cons_addr;
     params.err_mode = UCP_ERR_HANDLING_MODE_PEER;
     params.err_handler.cb = dyad_mod_ucx_ep_err_handler;
-    params.err_handler.args = (void*) dtl_handle->h;
+    params.err_handler.arg = (void*) dtl_handle->h;
     FLUX_LOG_INFO (dtl_handle->h, "Create UCP endpoint for communication with consumer\n");
     status = ucp_ep_create(
         dtl_handle->ucx_worker,
