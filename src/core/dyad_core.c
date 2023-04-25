@@ -601,19 +601,25 @@ dyad_rc_t dyad_init (bool debug,
         // TODO see if we want a different return val
         return DYAD_RC_NOCTX;
     }
+    printf("KVS namespace is not NULL\n");
     const size_t namespace_len = strlen (kvs_namespace);
+    printf("Alloc buffer for namespace\n");
     (*ctx)->kvs_namespace = (char*)malloc (namespace_len + 1);
     if ((*ctx)->kvs_namespace == NULL) {
+        printf("Namespace alloc failed\n");
         FLUX_LOG_ERR ((*ctx)->h,
                       "Could not allocate buffer for KVS namespace!\n");
         free (*ctx);
         *ctx = NULL;
         return DYAD_RC_NOCTX;
     }
+    printf("Namespace alloc succeeded\n");
     strncpy ((*ctx)->kvs_namespace, kvs_namespace, namespace_len + 1);
     // Initialize the DTL based on the value of dtl_mode
     // If an error occurs, log it and return an error
+    printf("Copied namespace into ctx\n");
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: inintializing DYAD DTL");
+    printf("Initializing DYAD DTL\n");
     rc = dyad_dtl_init(
         dtl_mode,
         (*ctx)->h,
@@ -623,9 +629,11 @@ dyad_rc_t dyad_init (bool debug,
     );
     if (DYAD_IS_ERROR(rc))
     {
+        printf("DTL init error occured\n");
         FLUX_LOG_ERR ((*ctx)->h, "Cannot initialize the DTL\n");
         return rc;
     }
+    printf("DTL init error succeeded\n");
     // If the producer-managed path is provided, copy it into
     // the dyad_ctx_t object
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving producer path");
