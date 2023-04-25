@@ -633,16 +633,21 @@ dyad_rc_t dyad_init (bool debug,
         FLUX_LOG_ERR ((*ctx)->h, "Cannot initialize the DTL\n");
         return rc;
     }
-    printf("DTL init error succeeded\n");
+    printf("DTL init succeeded\n");
     // If the producer-managed path is provided, copy it into
     // the dyad_ctx_t object
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving producer path");
+    printf("Checking producer path\n");
     if (prod_managed_path == NULL) {
+        printf("No producer path\n");
         (*ctx)->prod_managed_path = NULL;
     } else {
+        printf("Getting strlen of producer path\n");
         const size_t prod_path_len = strlen (prod_managed_path);
+        printf("Allocating buffer for producer path\n");
         (*ctx)->prod_managed_path = (char*)malloc (prod_path_len + 1);
         if ((*ctx)->prod_managed_path == NULL) {
+            printf("Allocation of producer path failed\n");
             FLUX_LOG_ERR ((*ctx)->h,
                           "Could not allocate buffer for Producer managed "
                           "path!\n");
@@ -651,18 +656,24 @@ dyad_rc_t dyad_init (bool debug,
             *ctx = NULL;
             return DYAD_RC_NOCTX;
         }
+        printf("Copying producer path into buffer\n");
         strncpy ((*ctx)->prod_managed_path, prod_managed_path,
                  prod_path_len + 1);
     }
     // If the consumer-managed path is provided, copy it into
     // the dyad_ctx_t object
+    printf("Checking consumer path\n");
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving consumer path");
     if (cons_managed_path == NULL) {
+        printf("No consumer path\n");
         (*ctx)->cons_managed_path = NULL;
     } else {
+        printf("Getting strlen of consumer path\n");
         const size_t cons_path_len = strlen (cons_managed_path);
+        printf("Allocating buffer for consumer path\n");
         (*ctx)->cons_managed_path = (char*)malloc (cons_path_len + 1);
         if ((*ctx)->cons_managed_path == NULL) {
+            printf("Buffer allocation failed for consumer path\n");
             FLUX_LOG_ERR ((*ctx)->h,
                           "Could not allocate buffer for Consumer managed "
                           "path!\n");
@@ -672,6 +683,7 @@ dyad_rc_t dyad_init (bool debug,
             *ctx = NULL;
             return DYAD_RC_NOCTX;
         }
+        printf("Copying consumer path\n");
         strncpy ((*ctx)->cons_managed_path, cons_managed_path,
                  cons_path_len + 1);
     }
