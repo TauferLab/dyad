@@ -593,6 +593,7 @@ dyad_rc_t dyad_init (bool debug,
         FLUX_LOG_ERR ((*ctx)->h, "Could not get Flux rank!\n");
         return DYAD_RC_FLUXFAIL;
     }
+    printf("After flux_get_rank\n");
     // If the namespace is provided, copy it into the dyad_ctx_t object
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving KVS namespace");
     if (kvs_namespace == NULL) {
