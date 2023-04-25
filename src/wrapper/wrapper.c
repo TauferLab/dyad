@@ -125,7 +125,6 @@ int open (const char *path, int oflag, ...)
     if (ctx == NULL) {
         dyad_wrapper_init ();
     }
-    printf("After dyad_wrapper_init\n");
 
     if (oflag & O_CREAT) {
         va_list arg;
@@ -133,39 +132,29 @@ int open (const char *path, int oflag, ...)
         mode = va_arg (arg, int);
         va_end (arg);
     }
-    printf("Completed oflag processing\n");
 
     func_ptr = (open_ptr_t)dlsym (RTLD_NEXT, "open");
     if ((error = dlerror ())) {
-        printf("dlsym error\n");
         DPRINTF (ctx, "DYAD_SYNC: error in dlsym: %s\n", error);
         return -1;
     }
-    printf("dlsym succeeded\n");
 
     if ((mode != O_RDONLY) || is_path_dir (path)) {
         // TODO: make sure if the directory mode is consistent
-        printf("Detected bad consumer mode\n");
         goto real_call;
     }
-    printf("Mode check passed\n");
 
     if (!(ctx && ctx->h) || (ctx && !ctx->reenter)) {
-        printf("Can't open_sync\n");
         IPRINTF (ctx, "DYAD_SYNC: open sync not applicable for \"%s\".\n",
                  path);
         goto real_call;
     }
-    printf("Context check passed\n");
 
     IPRINTF (ctx, "DYAD_SYNC: enters open sync (\"%s\").\n", path);
-    printf("Consuming data\n");
     if (DYAD_IS_ERROR (dyad_consume (ctx, path))) {
-        printf("Consume failed\n");
         DPRINTF (ctx, "DYAD_SYNC: failed open sync (\"%s\").\n", path);
         goto real_call;
     }
-    printf("Consume succeeded\n");
     IPRINTF (ctx, "DYAD_SYNC: exists open sync (\"%s\").\n", path);
 
 real_call:;
@@ -182,29 +171,39 @@ FILE *fopen (const char *path, const char *mode)
     if (ctx == NULL) {
         dyad_wrapper_init ();
     }
+    printf("After dyad_wrapper_init\n");
 
     func_ptr = (fopen_ptr_t)dlsym (RTLD_NEXT, "fopen");
     if ((error = dlerror ())) {
+        printf("dlsym error\n");
         DPRINTF (ctx, "DYAD_SYNC: error in dlsym: %s\n", error);
         return NULL;
     }
+    printf("dlsym succeeded\n");
 
     if ((strcmp (mode, "r") != 0) || is_path_dir (path)) {
         // TODO: make sure if the directory mode is consistent
+        printf("Detected bad consumer mode\n");
         goto real_call;
     }
+    printf("Mode check passed\n");
 
     if (!(ctx && ctx->h) || (ctx && !ctx->reenter) || !path) {
+        printf("Can't open_sync\n");
         IPRINTF (ctx, "DYAD_SYNC: fopen sync not applicable for \"%s\".\n",
                  ((path) ? path : ""));
         goto real_call;
     }
+    printf("Context check passed\n");
 
     IPRINTF (ctx, "DYAD_SYNC: enters fopen sync (\"%s\").\n", path);
+    printf("Consuming data\n");
     if (DYAD_IS_ERROR (dyad_consume (ctx, path))) {
+        printf("Consume failed\n");
         DPRINTF (ctx, "DYAD_SYNC: failed fopen sync (\"%s\").\n", path);
         goto real_call;
     }
+    printf("Consume succeeded\n");
     IPRINTF (ctx, "DYAD_SYNC: exits fopen sync (\"%s\").\n", path);
 
 real_call:
