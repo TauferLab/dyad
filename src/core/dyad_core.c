@@ -579,6 +579,7 @@ dyad_rc_t dyad_init (bool debug,
     // object. If the open operation failed, return DYAD_FLUXFAIL
     printf("DYAD_CORE: openning connection to Flux\n");
     (*ctx)->h = flux_open (NULL, 0);
+    printf("DYAD_CORE: openned connection to Flux\n");
     if ((*ctx)->h == NULL) {
         fprintf (stderr, "Could not open Flux handle!\n");
         return DYAD_RC_FLUXFAIL;
