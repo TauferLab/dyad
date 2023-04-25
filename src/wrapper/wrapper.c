@@ -91,12 +91,13 @@ void dyad_wrapper_init (void)
     rc = dyad_init_env (&ctx);
 
     if (DYAD_IS_ERROR (rc)) {
-        printf("dyad_init_env failed (code = %d)\n", rc);
-        DYAD_LOG_ERR (ctx, "Could not initialize DYAD!\n");
+        fprintf(stderr, "Failed to initialize DYAD (code = %d)\n", rc);
+        if (ctx != NULL) {
+            dyad_wrapper_fini();
+        }
         ctx = NULL;
         return;
     }
-    printf("dyad_init_env succeeded\n");
 
     DYAD_LOG_INFO (ctx, "DYAD Initialized\n");
     DYAD_LOG_INFO (ctx, "%s=%s\n", DYAD_SYNC_DEBUG_ENV,
@@ -168,43 +169,32 @@ FILE *fopen (const char *path, const char *mode)
     typedef FILE *(*fopen_ptr_t) (const char *, const char *);
     fopen_ptr_t func_ptr = NULL;
 
-    printf("Fopen on %s\n", path);
     if (ctx == NULL) {
         dyad_wrapper_init ();
     }
-    printf("After dyad_wrapper_init\n");
 
     func_ptr = (fopen_ptr_t)dlsym (RTLD_NEXT, "fopen");
     if ((error = dlerror ())) {
-        printf("dlsym error\n");
         DPRINTF (ctx, "DYAD_SYNC: error in dlsym: %s\n", error);
         return NULL;
     }
-    printf("dlsym succeeded\n");
 
     if ((strcmp (mode, "r") != 0) || is_path_dir (path)) {
         // TODO: make sure if the directory mode is consistent
-        printf("Detected bad consumer mode\n");
         goto real_call;
     }
-    printf("Mode check passed\n");
 
     if (!(ctx && ctx->h) || (ctx && !ctx->reenter) || !path) {
-        printf("Can't open_sync\n");
         IPRINTF (ctx, "DYAD_SYNC: fopen sync not applicable for \"%s\".\n",
                  ((path) ? path : ""));
         goto real_call;
     }
-    printf("Context check passed\n");
 
     IPRINTF (ctx, "DYAD_SYNC: enters fopen sync (\"%s\").\n", path);
-    printf("Consuming data\n");
     if (DYAD_IS_ERROR (dyad_consume (ctx, path))) {
-        printf("Consume failed\n");
         DPRINTF (ctx, "DYAD_SYNC: failed fopen sync (\"%s\").\n", path);
         goto real_call;
     }
-    printf("Consume succeeded\n");
     IPRINTF (ctx, "DYAD_SYNC: exits fopen sync (\"%s\").\n", path);
 
 real_call:

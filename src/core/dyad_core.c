@@ -579,21 +579,17 @@ dyad_rc_t dyad_init (bool debug,
     // object. If the open operation failed, return DYAD_FLUXFAIL
     printf("DYAD_CORE: openning connection to Flux\n");
     (*ctx)->h = flux_open (NULL, 0);
-    printf("DYAD_CORE: openned connection to Flux\n");
     if ((*ctx)->h == NULL) {
         fprintf (stderr, "Could not open Flux handle!\n");
         return DYAD_RC_FLUXFAIL;
     }
     // Get the rank of the Flux broker corresponding
     // to the handle. If this fails, return DYAD_FLUXFAIL
-    printf("Before first FLUX_LOG_INFO\n");
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: getting Flux rank");
-    printf("After first FLUX_LOG_INFO\n");
     if (flux_get_rank ((*ctx)->h, &((*ctx)->rank)) < 0) {
         FLUX_LOG_ERR ((*ctx)->h, "Could not get Flux rank!\n");
         return DYAD_RC_FLUXFAIL;
     }
-    printf("After flux_get_rank\n");
     // If the namespace is provided, copy it into the dyad_ctx_t object
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving KVS namespace");
     if (kvs_namespace == NULL) {
@@ -601,25 +597,19 @@ dyad_rc_t dyad_init (bool debug,
         // TODO see if we want a different return val
         return DYAD_RC_NOCTX;
     }
-    printf("KVS namespace is not NULL\n");
     const size_t namespace_len = strlen (kvs_namespace);
-    printf("Alloc buffer for namespace\n");
     (*ctx)->kvs_namespace = (char*)malloc (namespace_len + 1);
     if ((*ctx)->kvs_namespace == NULL) {
-        printf("Namespace alloc failed\n");
         FLUX_LOG_ERR ((*ctx)->h,
                       "Could not allocate buffer for KVS namespace!\n");
         free (*ctx);
         *ctx = NULL;
         return DYAD_RC_NOCTX;
     }
-    printf("Namespace alloc succeeded\n");
     strncpy ((*ctx)->kvs_namespace, kvs_namespace, namespace_len + 1);
     // Initialize the DTL based on the value of dtl_mode
     // If an error occurs, log it and return an error
-    printf("Copied namespace into ctx\n");
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: inintializing DYAD DTL");
-    printf("Initializing DYAD DTL\n");
     rc = dyad_dtl_init(
         dtl_mode,
         (*ctx)->h,
@@ -629,25 +619,18 @@ dyad_rc_t dyad_init (bool debug,
     );
     if (DYAD_IS_ERROR(rc))
     {
-        printf("DTL init error occured\n");
         FLUX_LOG_ERR ((*ctx)->h, "Cannot initialize the DTL\n");
         return rc;
     }
-    printf("DTL init succeeded\n");
     // If the producer-managed path is provided, copy it into
     // the dyad_ctx_t object
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving producer path");
-    printf("Checking producer path\n");
     if (prod_managed_path == NULL) {
-        printf("No producer path\n");
         (*ctx)->prod_managed_path = NULL;
     } else {
-        printf("Getting strlen of producer path\n");
         const size_t prod_path_len = strlen (prod_managed_path);
-        printf("Allocating buffer for producer path\n");
         (*ctx)->prod_managed_path = (char*)malloc (prod_path_len + 1);
         if ((*ctx)->prod_managed_path == NULL) {
-            printf("Allocation of producer path failed\n");
             FLUX_LOG_ERR ((*ctx)->h,
                           "Could not allocate buffer for Producer managed "
                           "path!\n");
@@ -656,24 +639,18 @@ dyad_rc_t dyad_init (bool debug,
             *ctx = NULL;
             return DYAD_RC_NOCTX;
         }
-        printf("Copying producer path into buffer\n");
         strncpy ((*ctx)->prod_managed_path, prod_managed_path,
                  prod_path_len + 1);
     }
     // If the consumer-managed path is provided, copy it into
     // the dyad_ctx_t object
-    printf("Checking consumer path\n");
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving consumer path");
     if (cons_managed_path == NULL) {
-        printf("No consumer path\n");
         (*ctx)->cons_managed_path = NULL;
     } else {
-        printf("Getting strlen of consumer path\n");
         const size_t cons_path_len = strlen (cons_managed_path);
-        printf("Allocating buffer for consumer path\n");
         (*ctx)->cons_managed_path = (char*)malloc (cons_path_len + 1);
         if ((*ctx)->cons_managed_path == NULL) {
-            printf("Buffer allocation failed for consumer path\n");
             FLUX_LOG_ERR ((*ctx)->h,
                           "Could not allocate buffer for Consumer managed "
                           "path!\n");
@@ -683,7 +660,6 @@ dyad_rc_t dyad_init (bool debug,
             *ctx = NULL;
             return DYAD_RC_NOCTX;
         }
-        printf("Copying consumer path\n");
         strncpy ((*ctx)->cons_managed_path, cons_managed_path,
                  cons_path_len + 1);
     }
@@ -711,7 +687,6 @@ dyad_rc_t dyad_init_env (dyad_ctx_t **ctx)
 
     printf("DYAD_CORE: Initializing with environment variables\n");
 
-    printf("DYAD_CORE: checking for debug mode\n");
     if ((e = getenv (DYAD_SYNC_DEBUG_ENV))) {
         debug = true;
         enable_debug_dyad_utils ();
@@ -720,56 +695,48 @@ dyad_rc_t dyad_init_env (dyad_ctx_t **ctx)
         disable_debug_dyad_utils ();
     }
 
-    printf("DYAD_CORE: checking for sync_check\n");
     if ((e = getenv (DYAD_SYNC_CHECK_ENV))) {
         check = true;
     } else {
         check = false;
     }
 
-    printf("DYAD_CORE: checking for shared storage mode\n");
     if ((e = getenv (DYAD_SHARED_STORAGE_ENV))) {
         shared_storage = true;
     } else {
         shared_storage = false;
     }
 
-    printf("DYAD_CORE: checking for KVS key depth\n");
     if ((e = getenv (DYAD_KEY_DEPTH_ENV))) {
         key_depth = atoi (e);
     } else {
         key_depth = 3;
     }
 
-    printf("DYAD_CORE: checking for KVS key bins\n");
     if ((e = getenv (DYAD_KEY_BINS_ENV))) {
         key_bins = atoi (e);
     } else {
         key_bins = 1024;
     }
 
-    printf("DYAD_CORE: checking for KVS namespace\n");
     if ((e = getenv (DYAD_KVS_NAMESPACE_ENV))) {
         kvs_namespace = e;
     } else {
         kvs_namespace = NULL;
     }
 
-    printf("DYAD_CORE: checking for consumer path\n");
     if ((e = getenv (DYAD_PATH_CONSUMER_ENV))) {
         cons_managed_path = e;
     } else {
         cons_managed_path = NULL;
     }
 
-    printf("DYAD_CORE: checking for producer path\n");
     if ((e = getenv (DYAD_PATH_PRODUCER_ENV))) {
         prod_managed_path = e;
     } else {
         prod_managed_path = NULL;
     }
 
-    printf("DYAD_CORE: checking for DTL mode\n");
     if ((e = getenv (DYAD_DTL_MODE_ENV))) {
         dtl_mode_env_len = strlen (e);
         if (strncmp (e, "FLUX_RPC", dtl_mode_env_len) == 0) {
@@ -784,6 +751,7 @@ dyad_rc_t dyad_init_env (dyad_ctx_t **ctx)
     } else {
         dtl_mode = DYAD_DTL_FLUX_RPC;
     }
+    printf ("DYAD_CORE: retrieved configuration from environment. Now initializing DYAD\n");
     return dyad_init (debug, check, shared_storage, key_depth, key_bins,
                       kvs_namespace, prod_managed_path, cons_managed_path,
                       dtl_mode, ctx);
