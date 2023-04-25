@@ -91,7 +91,10 @@ void dyad_wrapper_init (void)
     rc = dyad_init_env (&ctx);
 
     if (DYAD_IS_ERROR (rc)) {
-        DYAD_LOG_ERR (ctx, "Could not initialize DYAD!\n");
+        fprintf(stderr, "Failed to initialize DYAD (code = %d)\n", rc);
+        if (ctx != NULL) {
+            dyad_wrapper_fini();
+        }
         ctx = NULL;
         return;
     }
