@@ -577,6 +577,7 @@ dyad_rc_t dyad_init (bool debug,
     (*ctx)->key_bins = key_bins;
     // Open a Flux handle and store it in the dyad_ctx_t
     // object. If the open operation failed, return DYAD_FLUXFAIL
+    printf("DYAD_CORE: openning connection to Flux\n");
     (*ctx)->h = flux_open (NULL, 0);
     if ((*ctx)->h == NULL) {
         fprintf (stderr, "Could not open Flux handle!\n");
@@ -584,11 +585,13 @@ dyad_rc_t dyad_init (bool debug,
     }
     // Get the rank of the Flux broker corresponding
     // to the handle. If this fails, return DYAD_FLUXFAIL
+    FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: getting Flux rank");
     if (flux_get_rank ((*ctx)->h, &((*ctx)->rank)) < 0) {
         FLUX_LOG_ERR ((*ctx)->h, "Could not get Flux rank!\n");
         return DYAD_RC_FLUXFAIL;
     }
     // If the namespace is provided, copy it into the dyad_ctx_t object
+    FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving KVS namespace");
     if (kvs_namespace == NULL) {
         FLUX_LOG_ERR ((*ctx)->h, "No KVS namespace provided!\n");
         // TODO see if we want a different return val
@@ -606,6 +609,7 @@ dyad_rc_t dyad_init (bool debug,
     strncpy ((*ctx)->kvs_namespace, kvs_namespace, namespace_len + 1);
     // Initialize the DTL based on the value of dtl_mode
     // If an error occurs, log it and return an error
+    FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: inintializing DYAD DTL");
     rc = dyad_dtl_init(
         dtl_mode,
         (*ctx)->h,
@@ -620,6 +624,7 @@ dyad_rc_t dyad_init (bool debug,
     }
     // If the producer-managed path is provided, copy it into
     // the dyad_ctx_t object
+    FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving producer path");
     if (prod_managed_path == NULL) {
         (*ctx)->prod_managed_path = NULL;
     } else {
@@ -639,6 +644,7 @@ dyad_rc_t dyad_init (bool debug,
     }
     // If the consumer-managed path is provided, copy it into
     // the dyad_ctx_t object
+    FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: saving consumer path");
     if (cons_managed_path == NULL) {
         (*ctx)->cons_managed_path = NULL;
     } else {
@@ -679,8 +685,9 @@ dyad_rc_t dyad_init_env (dyad_ctx_t **ctx)
     size_t dtl_mode_env_len = 0;
     dyad_dtl_mode_t dtl_mode = DYAD_DTL_FLUX_RPC;
 
-    printf("DYAD_CORE: Initializing with environment varialbes\n");
+    printf("DYAD_CORE: Initializing with environment variables\n");
 
+    printf("DYAD_CORE: checking for debug mode\n");
     if ((e = getenv (DYAD_SYNC_DEBUG_ENV))) {
         debug = true;
         enable_debug_dyad_utils ();
@@ -689,48 +696,56 @@ dyad_rc_t dyad_init_env (dyad_ctx_t **ctx)
         disable_debug_dyad_utils ();
     }
 
+    printf("DYAD_CORE: checking for sync_check\n");
     if ((e = getenv (DYAD_SYNC_CHECK_ENV))) {
         check = true;
     } else {
         check = false;
     }
 
+    printf("DYAD_CORE: checking for shared storage mode\n");
     if ((e = getenv (DYAD_SHARED_STORAGE_ENV))) {
         shared_storage = true;
     } else {
         shared_storage = false;
     }
 
+    printf("DYAD_CORE: checking for KVS key depth\n");
     if ((e = getenv (DYAD_KEY_DEPTH_ENV))) {
         key_depth = atoi (e);
     } else {
         key_depth = 3;
     }
 
+    printf("DYAD_CORE: checking for KVS key bins\n");
     if ((e = getenv (DYAD_KEY_BINS_ENV))) {
         key_bins = atoi (e);
     } else {
         key_bins = 1024;
     }
 
+    printf("DYAD_CORE: checking for KVS namespace\n");
     if ((e = getenv (DYAD_KVS_NAMESPACE_ENV))) {
         kvs_namespace = e;
     } else {
         kvs_namespace = NULL;
     }
 
+    printf("DYAD_CORE: checking for consumer path\n");
     if ((e = getenv (DYAD_PATH_CONSUMER_ENV))) {
         cons_managed_path = e;
     } else {
         cons_managed_path = NULL;
     }
 
+    printf("DYAD_CORE: checking for producer path\n");
     if ((e = getenv (DYAD_PATH_PRODUCER_ENV))) {
         prod_managed_path = e;
     } else {
         prod_managed_path = NULL;
     }
 
+    printf("DYAD_CORE: checking for DTL mode\n");
     if ((e = getenv (DYAD_DTL_MODE_ENV))) {
         dtl_mode_env_len = strlen (e);
         if (strncmp (e, "FLUX_RPC", dtl_mode_env_len) == 0) {
