@@ -168,6 +168,7 @@ FILE *fopen (const char *path, const char *mode)
     typedef FILE *(*fopen_ptr_t) (const char *, const char *);
     fopen_ptr_t func_ptr = NULL;
 
+    printf("Fopen on %s\n", path);
     if (ctx == NULL) {
         dyad_wrapper_init ();
     }
