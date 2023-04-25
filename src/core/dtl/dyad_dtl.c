@@ -26,13 +26,13 @@ dyad_rc_t dyad_dtl_init(dyad_dtl_mode_t mode, flux_t *h,
     if (mode == DYAD_DTL_UCX) {
         FLUX_LOG_INFO (h, "Initializing UCX DTL\n");
         return dyad_dtl_ucx_init (h, kvs_namespace, debug,
-                (dyad_dtl_ucx_t**)&(*dtl_handle)->real_dtl_handle);
+                (dyad_dtl_ucx_t**)&((*dtl_handle)->real_dtl_handle));
     }
     if (mode == DYAD_DTL_FLUX_RPC)
     {
         FLUX_LOG_INFO (h, "Initializing Flux RPC DTL\n");
         return dyad_dtl_flux_init (h, kvs_namespace, debug,
-                (dyad_dtl_flux_t**)&(*dtl_handle)->real_dtl_handle);
+                (dyad_dtl_flux_t**)&((*dtl_handle)->real_dtl_handle));
     }
     FLUX_LOG_ERR (h, "Invalid DYAD DTL Mode: %d\n", (int) mode);
     return DYAD_RC_BADDTLMODE;
@@ -142,6 +142,7 @@ dyad_rc_t dyad_dtl_finalize(dyad_dtl_t **dtl_handle)
     dyad_dtl_mode_t mode = (*dtl_handle)->mode;
     void *real_dtl_handle = (*dtl_handle)->real_dtl_handle;
     free(*dtl_handle);
+    *dtl_handle = NULL;
     if (mode == DYAD_DTL_UCX) {
         return dyad_dtl_ucx_finalize(
             (dyad_dtl_ucx_t*) real_dtl_handle
