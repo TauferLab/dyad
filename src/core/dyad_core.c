@@ -586,7 +586,9 @@ dyad_rc_t dyad_init (bool debug,
     }
     // Get the rank of the Flux broker corresponding
     // to the handle. If this fails, return DYAD_FLUXFAIL
+    printf("Before first FLUX_LOG_INFO\n");
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: getting Flux rank");
+    printf("After first FLUX_LOG_INFO\n");
     if (flux_get_rank ((*ctx)->h, &((*ctx)->rank)) < 0) {
         FLUX_LOG_ERR ((*ctx)->h, "Could not get Flux rank!\n");
         return DYAD_RC_FLUXFAIL;
