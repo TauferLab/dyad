@@ -465,7 +465,7 @@ dyad_rc_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
         }
         // Release worker if not already released
         if (dtl_handle->ucx_worker != NULL)
-        {
+       {
             FLUX_LOG_INFO (dtl_handle->h, "Releasing worker\n");
             ucp_worker_destroy(dtl_handle->ucx_worker);
             dtl_handle->ucx_worker = NULL;
@@ -485,7 +485,7 @@ dyad_rc_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
         printf("Freeing DTL handle\n");
         // Free the handle and set to NULL to prevent double free
         free(dtl_handle);
-        dtl_handle = NULL;
+        //dtl_handle = NULL;
     }
     return DYAD_RC_OK;
 }
