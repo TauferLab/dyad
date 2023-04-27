@@ -3,15 +3,15 @@
 #include "ucx_mod_dtl.h"
 #include "flux_mod_dtl.h"
 
-struct dyad_mod_dtl {
+struct dyad_dtl {
     dyad_mod_dtl_mode_t mode;
     flux_t *h;
     void *real_handle;
 };
 
-int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode,
+int dyad_mod_dtl_init(dyad_dtl_mode_t mode,
         flux_t *h, bool debug,
-        dyad_mod_dtl_t **dtl_handle)
+        dyad_dtl_t **dtl_handle)
 {
     *dtl_handle = malloc(sizeof(struct dyad_mod_dtl));
     if (*dtl_handle == NULL)
@@ -43,7 +43,7 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode,
     return -1;
 }
 
-int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
+int dyad_mod_dtl_rpc_unpack(dyad_dtl_t *dtl_handle,
         const flux_msg_t *packed_obj, char **upath)
 {
     if (dtl_handle->mode == DYAD_DTL_UCX)
@@ -66,7 +66,7 @@ int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
     return -1;
 }
 
-int dyad_mod_dtl_rpc_respond(dyad_mod_dtl_t *dtl_handle, const flux_msg_t *orig_msg)
+int dyad_mod_dtl_rpc_respond(dyad_dtl_t *dtl_handle, const flux_msg_t *orig_msg)
 {
     if (dtl_handle->mode == DYAD_DTL_UCX)
     {
@@ -86,7 +86,7 @@ int dyad_mod_dtl_rpc_respond(dyad_mod_dtl_t *dtl_handle, const flux_msg_t *orig_
     return -1;
 }
 
-int dyad_mod_dtl_establish_connection(dyad_mod_dtl_t *dtl_handle)
+int dyad_mod_dtl_establish_connection(dyad_dtl_t *dtl_handle)
 {
     if (dtl_handle->mode == DYAD_DTL_UCX)
     {
@@ -104,7 +104,7 @@ int dyad_mod_dtl_establish_connection(dyad_mod_dtl_t *dtl_handle)
     return -1;
 }
 
-int dyad_mod_dtl_send(dyad_mod_dtl_t *dtl_handle, void *buf, size_t buflen)
+int dyad_mod_dtl_send(dyad_dtl_t *dtl_handle, void *buf, size_t buflen)
 {
     if (dtl_handle->mode == DYAD_DTL_UCX)
     {
@@ -126,7 +126,7 @@ int dyad_mod_dtl_send(dyad_mod_dtl_t *dtl_handle, void *buf, size_t buflen)
     return -1;
 }
 
-int dyad_mod_dtl_close_connection(dyad_mod_dtl_t *dtl_handle)
+int dyad_mod_dtl_close_connection(dyad_dtl_t *dtl_handle)
 {
     if (dtl_handle->mode == DYAD_DTL_UCX)
     {
@@ -144,7 +144,7 @@ int dyad_mod_dtl_close_connection(dyad_mod_dtl_t *dtl_handle)
     return -1;
 }
 
-int dyad_mod_dtl_finalize(dyad_mod_dtl_t **dtl_handle)
+int dyad_mod_dtl_finalize(dyad_dtl_t **dtl_handle)
 {
     if (dtl_handle == NULL || *dtl_handle == NULL)
         return 0;

@@ -1,5 +1,5 @@
-#ifndef __DYAD_MOD_DYAD_FLUX_LOG_H__
-#define __DYAD_MOD_DYAD_FLUX_LOG_H__
+#ifndef __DYAD_FLUX_LOG_H__
+#define __DYAD_FLUX_LOG_H__
 
 #include <flux/core.h>
 

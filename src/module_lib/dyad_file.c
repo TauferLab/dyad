@@ -8,6 +8,7 @@
  * SPDX-License-Identifier: LGPL-3.0
 \************************************************************/
 
+#include "dyad_modules.h"
 #if defined(__cplusplus)
 #include <cerrno>
 #include <cstddef>
@@ -31,7 +32,6 @@
 #include <unistd.h>
 
 #include "dtl/dyad_mod_dtl.h"
-#include "read_all.h"
 #include "utils.h"
 
 #define TIME_DIFF(Tstart, Tend)                                                \
@@ -44,15 +44,23 @@ struct dyad_mod_ctx {
     bool debug;
     flux_msg_handler_t **handlers;
     const char *dyad_path;
-    dyad_mod_dtl_t *dtl_handle;
+    dyad_dtl_t *dtl_handle;
+    dyad_module_get_data_size_t get_size_cb;
+    dyad_module_get_t get_cb;
+    dyad_module_free_user_data_t free_cb;
+    void *user_data;
 };
 
 const struct dyad_mod_ctx dyad_mod_ctx_default = {
-    NULL,
-    false,
-    NULL,
-    NULL,
-    NULL
+    NULL,  // h
+    false, // debug
+    NULL,  // handlers
+    NULL,  // dyad_path
+    NULL,  // dtl_handle
+    NULL,  // get_size_cb
+    NULL,  // get_cb
+    NULL,  // free_cb
+    NULL,  // user_data
 };
 
 typedef struct dyad_mod_ctx dyad_mod_ctx_t;
@@ -65,43 +73,6 @@ void dyad_mod_fini (void)
 
     if (h != NULL) {
     }
-}
-
-static void freectx (void *arg)
-{
-    dyad_mod_ctx_t *ctx = (dyad_mod_ctx_t *)arg;
-    flux_msg_handler_delvec (ctx->handlers);
-    if (ctx->dtl_handle != NULL) {
-        dyad_mod_dtl_finalize (&(ctx->dtl_handle));
-        ctx->dtl_handle = NULL;
-    }
-    free (ctx);
-}
-
-static dyad_mod_ctx_t *getctx (flux_t *h)
-{
-    dyad_mod_ctx_t *ctx = (dyad_mod_ctx_t *)flux_aux_get (h, "dyad");
-
-    if (!ctx) {
-        ctx = (dyad_mod_ctx_t *) malloc (sizeof (*ctx));
-        ctx->h = h;
-        ctx->debug = false;
-        ctx->handlers = NULL;
-        ctx->dyad_path = NULL;
-        ctx->dtl_handle = NULL;
-        if (flux_aux_set (h, "dyad", ctx, freectx) < 0) {
-            FLUX_LOG_ERR (h, "DYAD_MOD: flux_aux_set() failed!\n");
-            goto getctx_error;
-        }
-    }
-
-    goto getctx_done;
-
-getctx_error:;
-    return NULL;
-
-getctx_done:
-    return ctx;
 }
 
 /* request callback called when dyad.fetch request is invoked */
@@ -159,17 +130,18 @@ static void dyad_fetch_request_cb (flux_t *h,
     }
 #endif  // DYAD_SPIN_WAIT
 
-    FLUX_LOG_INFO (h, "Reading file %s for transfer", fullpath);
-    fd = open (fullpath, O_RDONLY);
-    if (fd < 0) {
-        FLUX_LOG_ERR (h, "DYAD_MOD: Failed to open file \"%s\".\n", fullpath);
+    rc = ctx->get_size_cb (fullpath, &inlen, ctx->user_data);
+    if (rc < 0) {
+        FLUX_LOG_ERR (h, "DYAD_MOD: cannot get size of data to send to consumer\n");
+        errno = EIO;
         goto fetch_error;
     }
-    if ((inlen = read_all (fd, &inbuf)) < 0) {
-        FLUX_LOG_ERR (h, "DYAD_MOD: Failed to load file \"%s\".\n", fullpath);
+    rc = ctx->get_cb (fullpath, inbuf, inlen, ctx->user_data);
+    if (rc < 0) {
+        FLUX_LOG_ERR (h, "DYAD_MOD: cannot read data to send to consumer\n");
+        errno = EIO;
         goto fetch_error;
     }
-    close (fd);
 
     FLUX_LOG_INFO (h, "Establish DTL connection with consumer");
     if (dyad_mod_dtl_establish_connection (ctx->dtl_handle) < 0) {
@@ -205,7 +177,54 @@ fetch_error:
     return;
 }
 
-static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode, bool debug)
+static void freectx (void *arg)
+{
+    int rc = 0;
+    dyad_mod_ctx_t *ctx = (dyad_mod_ctx_t *)arg;
+    rc = ctx->free_cb(
+        &(ctx->user_data)
+    );
+    if (rc < 0)
+        FLUX_LOG_ERR (ctx->h, "Freeing of user data failed!\n");
+    flux_msg_handler_delvec (ctx->handlers);
+    if (ctx->dtl_handle != NULL) {
+        dyad_mod_dtl_finalize (&(ctx->dtl_handle));
+        ctx->dtl_handle = NULL;
+    }
+    free (ctx);
+}
+
+dyad_mod_ctx_t *dyad_module_get_ctx (flux_t *h)
+{
+    dyad_mod_ctx_t *ctx = (dyad_mod_ctx_t *)flux_aux_get (h, "dyad");
+
+    if (!ctx) {
+        ctx = (dyad_mod_ctx_t *) malloc (sizeof (*ctx));
+        ctx->h = h;
+        ctx->debug = false;
+        ctx->handlers = NULL;
+        ctx->dyad_path = NULL;
+        ctx->dtl_handle = NULL;
+        ctx->get_cb = NULL;
+        ctx->get_size_cb = NULL;
+        ctx->user_data = NULL;
+        ctx->free_cb = NULL;
+        if (flux_aux_set (h, "dyad", ctx, freectx) < 0) {
+            FLUX_LOG_ERR (h, "DYAD_MOD: flux_aux_set() failed!\n");
+            goto getctx_error;
+        }
+    }
+
+    goto getctx_done;
+
+getctx_error:;
+    return NULL;
+
+getctx_done:
+    return ctx;
+}
+
+int dyad_module_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode, bool debug)
 {
     dyad_mod_ctx_t *ctx = getctx (h);
     int rc = 0;
@@ -222,99 +241,44 @@ static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode, bool debug)
     return rc;
 }
 
-static const struct flux_msg_handler_spec htab[] = {{FLUX_MSGTYPE_REQUEST,
-                                                     "dyad.fetch",
-                                                     dyad_fetch_request_cb, 0},
-                                                    FLUX_MSGHANDLER_TABLE_END};
-
-void usage()
+void dyad_module_set_data_size_get_cb (dyad_mod_ctx_t *ctx,
+        dyad_module_get_data_size_t size_getter_cb)
 {
-    fprintf(stderr, "Usage: flux exec -r all flux module load dyad.so <PRODUCER_PATH> <DTL_MODE>\n\n");
-    fprintf(stderr, "DTL_MODE Values:\n");
-    fprintf(stderr, "================\n");
-    fprintf(stderr, " * FLUX_RPC: use Flux's RPC response mechanism to send data to consumer\n");
-    fprintf(stderr, " * UCX: use UCX to send data to consumer\n");
+    ctx->get_size_cb = size_getter_cb;
 }
 
-int mod_main (flux_t *h, int argc, char **argv)
+void dyad_module_set_data_get_cb (dyad_mod_ctx_t *ctx,
+        dyad_module_get_t data_getter_cb)
 {
-    const mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
-    dyad_mod_ctx_t *ctx = NULL;
-    size_t flag_len = 0;
-    dyad_mod_dtl_mode_t dtl_mode = DYAD_DTL_FLUX_RPC;
-    bool debug = false;
+    ctx->get_cb = data_getter_cb;
+}
 
-    if (!h) {
-        fprintf (stderr, "Failed to get flux handle\n");
-        goto mod_done;
-    }
+void dyad_module_set_user_data (dyad_mod_ctx_t *ctx,
+        void *user_data, dyad_module_free_user_data_t free_cb)
+{
+    ctx->user_data = user_data;
+    ctx->free_cb = free_cb;
+}
 
-    ctx = getctx (h);
+const struct flux_msg_handler_spec dyad_module_callbacks[] = {
+    {FLUX_MSGTYPE_REQUEST, "dyad.fetch", dyad_fetch_request_cb, 0},
+    FLUX_MSGHANDLER_TABLE_END
+};
 
-    FLUX_LOG_INFO (h, "Received %d cmd line args\n", argc);
-
-    if (argc < 1) {
-        FLUX_LOG_ERR (ctx->h,
-                      "DYAD_MOD: Missing argument(s). "
-                      "Requires a local dyad path.\n");
-        usage();
-        goto mod_error;
-    }
-    (ctx->dyad_path) = argv[0];
-    mkdir_as_needed (ctx->dyad_path, m);
-
-    if (argc >= 2) {
-        FLUX_LOG_INFO (h, "DTL Mode (from cmd line) is %s\n", argv[1]);
-        flag_len = strlen(argv[1]);
-        if (strncmp (argv[1], "FLUX_RPC", flag_len) == 0) {
-            dtl_mode = DYAD_DTL_FLUX_RPC;
-        } else if (strncmp (argv[1], "UCX", flag_len) == 0) {
-            dtl_mode = DYAD_DTL_UCX;
-        } else {
-            FLUX_LOG_ERR (ctx->h, "Invalid DTL mode provided\n");
-            usage();
-            goto mod_error;
-        }
-    }
-
-    if (argc >= 3) {
-        flag_len = strlen (argv[2]);
-        if (strncmp (argv[2], "--debug", flag_len) == 0 || strncmp (argv[2], "-d", flag_len) == 0) {
-            debug = true;
-        } else {
-            debug = false;
-        }
-    }
-
-    if (dyad_open (h, dtl_mode, debug) < 0) {
-        FLUX_LOG_ERR (ctx->h, "dyad_open failed");
-        goto mod_error;
-    }
-
-    fprintf (stderr, "dyad module begins using \"%s\"\n", argv[0]);
-    FLUX_LOG_INFO (ctx->h, "dyad module begins using \"%s\"\n", argv[0]);
-
-    if (flux_msg_handler_addvec (ctx->h, htab, (void *)h, &ctx->handlers) < 0) {
+int dyad_module_run (dyad_mod_ctx_t *ctx) {
+    if (flux_msg_handler_addvec (ctx->h, dyad_module_callbacks, (void *)(ctx->h), &ctx->handlers) < 0) {
         FLUX_LOG_ERR (ctx->h, "flux_msg_handler_addvec: %s\n",
                       strerror (errno));
-        goto mod_error;
+        return EXIT_FAILURE;
     }
 
     if (flux_reactor_run (flux_get_reactor (ctx->h), 0) < 0) {
         FLUX_LOG_ERR (ctx->h, "flux_reactor_run: %s", strerror (errno));
-        goto mod_error;
+        return EXIT_FAILURE;
     }
 
-    goto mod_done;
-
-mod_error:;
-    return EXIT_FAILURE;
-
-mod_done:;
     return EXIT_SUCCESS;
 }
-
-MOD_NAME ("dyad");
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
