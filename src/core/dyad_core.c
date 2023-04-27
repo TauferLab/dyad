@@ -577,7 +577,6 @@ dyad_rc_t dyad_init (bool debug,
     (*ctx)->key_bins = key_bins;
     // Open a Flux handle and store it in the dyad_ctx_t
     // object. If the open operation failed, return DYAD_FLUXFAIL
-    printf("DYAD_CORE: openning connection to Flux\n");
     (*ctx)->h = flux_open (NULL, 0);
     if ((*ctx)->h == NULL) {
         fprintf (stderr, "Could not open Flux handle!\n");
