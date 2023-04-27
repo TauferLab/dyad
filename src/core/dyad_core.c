@@ -839,20 +839,25 @@ int dyad_finalize (dyad_ctx_t** ctx)
     if (ctx == NULL || *ctx == NULL) {
         return DYAD_RC_OK;
     }
+    printf("Calling dyad_dtl_finalize\n");
     dyad_dtl_finalize (&(*ctx)->dtl_handle);
     if ((*ctx)->h != NULL) {
+        printf("Calling flux_close\n");
         flux_close ((*ctx)->h);
         (*ctx)->h = NULL;
     }
     if ((*ctx)->kvs_namespace != NULL) {
+        printf("Freeing kvs_namespace\n");
         free ((*ctx)->kvs_namespace);
         (*ctx)->kvs_namespace = NULL;
     }
     if ((*ctx)->prod_managed_path != NULL) {
+        printf("Freeing producer path\n");
         free ((*ctx)->prod_managed_path);
         (*ctx)->prod_managed_path = NULL;
     }
     if ((*ctx)->cons_managed_path != NULL) {
+        printf("Freeing consumer path\n");
         free ((*ctx)->cons_managed_path);
         (*ctx)->cons_managed_path = NULL;
     }
