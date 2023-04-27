@@ -482,6 +482,7 @@ dyad_rc_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
         // Flux handle should be released by the
         // DYAD context, so it is not released here
         dtl_handle->h = NULL;
+        printf("Freeing DTL handle\n");
         // Free the handle and set to NULL to prevent double free
         free(dtl_handle);
         dtl_handle = NULL;
