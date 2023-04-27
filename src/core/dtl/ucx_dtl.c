@@ -218,7 +218,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
 error:;
     // If an error occured, finalize the DTL handle and
     // return a failing error code
-    dyad_dtl_ucx_finalize(*dtl_handle);
+    // dyad_dtl_ucx_finalize(*dtl_handle);
     return DYAD_RC_UCXINIT_FAIL;
 }
 
@@ -485,7 +485,7 @@ dyad_rc_t dyad_dtl_ucx_finalize(dyad_dtl_ucx_t *dtl_handle)
         printf("Freeing DTL handle\n");
         // Free the handle and set to NULL to prevent double free
         free(dtl_handle);
-        //dtl_handle = NULL;
+        dtl_handle = NULL;
     }
     return DYAD_RC_OK;
 }
