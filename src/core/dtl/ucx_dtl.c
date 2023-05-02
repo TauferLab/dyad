@@ -148,7 +148,7 @@ dyad_rc_t dyad_dtl_ucx_init(flux_t *h, const char *kvs_namespace,
                             UCP_PARAM_FIELD_REQUEST_SIZE |
                             UCP_PARAM_FIELD_REQUEST_INIT;
     ucx_params.features = UCP_FEATURE_TAG |
-                          UCP_FEATURE_RMA |
+                          // UCP_FEATURE_RMA |
                           UCP_FEATURE_WAKEUP;
     ucx_params.request_size = sizeof(struct ucx_request);
     ucx_params.request_init = dyad_ucx_request_init;

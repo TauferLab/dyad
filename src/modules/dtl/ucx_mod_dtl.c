@@ -64,7 +64,7 @@ int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle
         UCP_PARAM_FIELD_REQUEST_SIZE |
         UCP_PARAM_FIELD_REQUEST_INIT;
     ucp_params.features = UCP_FEATURE_TAG |
-        UCP_FEATURE_RMA |
+        // UCP_FEATURE_RMA |
         UCP_FEATURE_WAKEUP;
     ucp_params.request_size = sizeof(struct mod_request);
     ucp_params.request_init = dyad_mod_ucx_request_init;
