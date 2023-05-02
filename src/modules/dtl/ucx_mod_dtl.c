@@ -231,7 +231,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
     FLUX_LOG_INFO (dtl_handle->h, "Processing UCP send request\n");
     if (UCS_PTR_IS_ERR(stat_ptr))
     {
-        FLUX_LOG_INFO (dtl_handle->h, "Error occured in UCP send\n");
+        FLUX_LOG_ERR (dtl_handle->h, "Error occured in UCP send\n");
         status = UCS_PTR_STATUS(stat_ptr);
     }
     else if (UCS_PTR_IS_PTR(stat_ptr))
