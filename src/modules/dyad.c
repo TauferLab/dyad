@@ -246,7 +246,7 @@ int mod_main (flux_t *h, int argc, char **argv)
     const mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     dyad_mod_ctx_t *ctx = NULL;
     size_t flag_len = 0;
-    dyad_mod_dtl_mode_t dtl_mode = DYAD_DTL_FLUX_RPC;
+    dyad_mod_dtl_mode_t dtl_mode = DYAD_DTL_UCX;
     bool debug = false;
 
     if (!h) {
