@@ -218,7 +218,7 @@ int dyad_mod_ucx_dtl_send(dyad_mod_ucx_dtl_t *dtl_handle, void *buf, size_t bufl
         &params
     );
 #else
-    FLUX_LOG_INFO (dtl_handle->h, "Sending data to consumer with ucp_tag_send_nb\n");
+    FLUX_LOG_INFO (dtl_handle->h, "Sending %lu bytes of data to consumer with ucp_tag_send_nb\n", buflen);
     stat_ptr = ucp_tag_send_nb(
         dtl_handle->curr_ep,
         buf,
