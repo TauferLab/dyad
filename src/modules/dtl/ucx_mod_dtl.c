@@ -182,6 +182,7 @@ int dyad_mod_ucx_dtl_establish_connection(dyad_mod_ucx_dtl_t *dtl_handle)
     );
     if (UCX_CHECK(status))
     {
+        FLUX_LOG_ERR (dtl_handle->h, "ucp_ep_create failed with status %d\n", (int) status);
         return -1;
     }
     if (dtl_handle->debug)
