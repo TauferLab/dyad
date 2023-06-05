@@ -170,6 +170,7 @@ static void dyad_fetch_request_cb (flux_t *h,
         goto fetch_error;
     }
     close (fd);
+    FLUX_LOG_INFO (h, "Is inbuf NULL? -> %i\n", (int) (inbuf == NULL));
 
     FLUX_LOG_INFO (h, "Establish DTL connection with consumer");
     if (dyad_mod_dtl_establish_connection (ctx->dtl_handle) < 0) {
