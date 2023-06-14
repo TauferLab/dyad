@@ -20,9 +20,11 @@
 #if defined(__cplusplus)
 //#include <cstdbool> // c++11
 #include <cstddef>
+#include <cstdio>
 #else
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #endif  // defined(__cplusplus)
 
 #include <sys/stat.h>
