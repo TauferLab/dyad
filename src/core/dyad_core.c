@@ -321,12 +321,14 @@ fetch_done:;
 __attribute__ ((annotate ("@critical_path()")))
 static dyad_rc_t dyad_get_data (
     const dyad_ctx_t* ctx,
+    const storage_check_record_t* restrict storage_record,
     const dyad_kvs_response_t* restrict kvs_data,
     const char** file_data,
     size_t* file_len)
 #else
 static inline dyad_rc_t dyad_get_data (
     const dyad_ctx_t* ctx,
+    const storage_check_record_t* restrict storage_record,
     const dyad_kvs_response_t* restrict kvs_data,
     const char** file_data,
     size_t* file_len)
@@ -334,6 +336,7 @@ static inline dyad_rc_t dyad_get_data (
 {
     dyad_rc_t rc = DYAD_RC_OK;
     dyad_rc_t final_rc = DYAD_RC_OK;
+    int should_transfer = 0;
     flux_future_t *f;
     json_t* rpc_payload;
     DYAD_LOG_INFO (ctx, "Packing payload for RPC to DYAD module");
@@ -354,8 +357,10 @@ static inline dyad_rc_t dyad_get_data (
         "dyad.fetch",
         kvs_data->owner_rank,
         FLUX_RPC_STREAMING,
-        "o",
-        rpc_payload
+        "[o, O, b]",
+        rpc_payload,
+        storage_record->packed_record,
+        storage_record->is_local
     );
     if (f == NULL)
     {
@@ -363,7 +368,19 @@ static inline dyad_rc_t dyad_get_data (
         rc = DYAD_RC_BADRPC;
         goto get_done;
     }
-    DYAD_LOG_INFO (ctx, "Receive RPC response from DYAD module");
+    DYAD_LOG_INFO (ctx, "Receive RPC response for shared storage from DYAD module");
+    rc = flux_rpc_get_unpack (f, "b", &should_transfer);
+    if (rc != 0) {
+        DYAD_LOG_ERR (ctx, "Could not get response from RPC for shared storage");
+        rc = DYAD_RC_BADRPC;
+        goto get_done;
+    }
+    if (should_transfer == 0) {
+        DYAD_LOG_INFO (ctx, "Module reported that transfer will be skipped");
+        rc = DYAD_RC_NO_TRANSFER_EXPECTED;
+        goto get_done;
+    }
+    DYAD_LOG_INFO (ctx, "Receive RPC response for DTL from DYAD module");
     rc = dyad_dtl_recv_rpc_response(ctx->dtl_handle, f);
     if (DYAD_IS_ERROR(rc))
     {
@@ -433,20 +450,32 @@ static inline dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
     char file_path_copy[PATH_MAX + 1];
     mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
     size_t written_len = 0;
+    storage_check_record_t* storage_record = NULL;
     memset (file_path, 0, PATH_MAX + 1);
     memset (file_path_copy, 0, PATH_MAX + 1);
-
-    // Call dyad_get_data to dispatch a RPC to the producer's Flux broker
-    // and retrieve the data associated with the file
-    rc = dyad_get_data (ctx, kvs_data, &file_data, &file_len);
-    if (DYAD_IS_ERROR(rc)) {
-        goto pull_done;
-    }
 
     // Build the full path to the file being consumed
     strncpy (file_path, ctx->cons_managed_path, PATH_MAX - 1);
     concat_str (file_path, kvs_data->fpath, "/", PATH_MAX);
     strncpy (file_path_copy, file_path, PATH_MAX);  // dirname modifies the arg
+    
+    // Get a record of info about the storage device the consumed
+    // data will be placed on
+    storage_record = check_if_local_storage (
+        ctx->view,
+        file_path
+    );
+    if (storage_record == NULL) {
+        goto pull_done;
+    }
+
+    // Call dyad_get_data to dispatch a RPC to the producer's Flux broker
+    // and retrieve the data associated with the file
+    rc = dyad_get_data (ctx, storage_record, kvs_data, &file_data, &file_len);
+    free_storage_check_record (&storage_record);
+    if (DYAD_IS_ERROR(rc)) {
+        goto pull_done;
+    }
 
     DYAD_LOG_INFO (ctx, "Saving retrieved data to %s\n", file_path);
     // Create the directory as needed
@@ -593,8 +622,7 @@ dyad_rc_t dyad_init (bool debug,
         (*ctx)->debug,
         &(*ctx)->dtl_handle
     );
-    if (DYAD_IS_ERROR(rc))
-    {
+    if (DYAD_IS_ERROR(rc)) {
         FLUX_LOG_ERR ((*ctx)->h, "Cannot initialize the DTL\n");
         return rc;
     }
@@ -638,6 +666,13 @@ dyad_rc_t dyad_init (bool debug,
         }
         strncpy ((*ctx)->cons_managed_path, cons_managed_path,
                  cons_path_len + 1);
+    }
+    // TODO replace hardcoded ingester method for storage graph
+    //      with a configuration setting once we have other methods
+    (*ctx)->view = init_storage_view (LINUX_PROC_MOUNTS);
+    if ((*ctx)->view == NULL) {
+        FLUX_LOG_ERR ((*ctx)->h, "Cannot create local view of storage graph");
+        return DYAD_RC_BAD_STORAGEGRAPH_OP;
     }
     // Initialization is now complete!
     // Set reenter and initialized to indicate this.
@@ -835,6 +870,9 @@ int dyad_finalize (dyad_ctx_t** ctx)
     if ((*ctx)->cons_managed_path != NULL) {
         free ((*ctx)->cons_managed_path);
         (*ctx)->cons_managed_path = NULL;
+    }
+    if ((*ctx)->view != NULL) {
+        finalize_storage_view (&(*ctx)->view);
     }
     free (*ctx);
     *ctx = NULL;

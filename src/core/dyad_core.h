@@ -6,6 +6,7 @@
 #include "dyad_rc.h"
 #include "dyad_flux_log.h"
 #include "dyad_dtl_defs.h"
+#include "storage_check.h"
 
 #ifdef __cplusplus
 #include <cstdio>
@@ -35,6 +36,7 @@ extern "C" {
 struct dyad_ctx {
     flux_t* h;                // the Flux handle for DYAD
     dyad_dtl_t *dtl_handle;   // Opaque handle to DTL info
+    storage_view_t* view;     // Local piece of storage graph
     bool debug;               // if true, perform debug logging
     bool check;               // if true, perform some check logging
     bool reenter;             // if false, do not recursively enter DYAD
