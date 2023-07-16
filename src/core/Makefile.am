@@ -8,8 +8,8 @@ libdyad_core_la_SOURCES = \
 	dtl/ucx_dtl.h \
 	dyad_core.c
 libdyad_core_la_LIBADD = \
-    $(top_builddir)/src/utils/libutils.la \
 	$(top_builddir)/src/utils/libmurmur3.la \
+	# libutils.la is provided by libstorage_graph.la
 	$(top_builddir)/src/storage_graph/libstorage_graph.la \
 	$(UCX_LIBS) \
 	$(JANSSON_LIBS) \

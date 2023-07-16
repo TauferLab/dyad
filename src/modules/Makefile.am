@@ -17,7 +17,7 @@ dyad_la_LDFLAGS = \
 	-export-symbols-regex '^mod_(name|main)$$' \
     -Wl,-rpath,'$(UCX_LIBDIR)'
 dyad_la_LIBADD = \
-	$(top_builddir)/src/utils/libutils.la \
+	# libutils.la is provided through libstorage_graph.ls
 	$(top_builddir)/src/storage_graph/libstorage_graph.la \
     $(UCX_LIBS) \
 	$(JANSSON_LIBS) \

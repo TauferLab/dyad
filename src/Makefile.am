@@ -1,1 +1,1 @@
-SUBDIRS = utils modules core wrapper stream
+SUBDIRS = utils storage_graph modules core wrapper stream

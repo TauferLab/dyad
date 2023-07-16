@@ -15,4 +15,5 @@ libstorage_graph_la_LIBADD = \
 libstorage_graph_la_CPPFLAGS = \
     $(AM_CPPFLAGS) \
 	-I$(top_srcdir)/src/utils \
+	-I$(top_srcdir)/src/storage_graph/ingesters \
     $(JANSSON_CFLAGS)

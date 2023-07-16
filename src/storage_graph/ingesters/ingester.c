@@ -10,7 +10,7 @@ ingester_t* create_ingester (ingester_methods_t mode)
         in->populate_storage_list = populate_from_linux_proc_mounts;
         return in;
     }
-    free_ingester (in);
+    free_ingester (&in);
     return NULL;
 }
 

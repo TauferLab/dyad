@@ -1,8 +1,8 @@
 #include "linux_mounts_ingester.h"
-#include "storage_view.h"
 
 #include <mntent.h>
 #include <stdio.h>
+#include <string.h>
 
 static const size_t NUM_LOCAL_TYPES = 8;
 static const char* LOCAL_TYPES[] = {
@@ -69,7 +69,7 @@ static inline int parse_and_populate_proc_mounts_line (storage_view_t* view,
         return -1;
     rc = add_storage_entry (view, storage_graph_entry);
     if (rc != 0) {
-        free_storage_entry (storage_graph_entry);
+        free_storage_entry (&storage_graph_entry);
         return -1;
     }
     return 1;

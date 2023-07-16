@@ -14,13 +14,13 @@ storage_view_t* init_storage_view (ingester_methods_t method)
         return NULL;
     in = create_ingester (method);
     if (in == NULL) {
-        free_storage_view (view);
+        free_storage_view (&view);
         return NULL;
     }
     rc = in->populate_storage_list (view);
-    free_ingester (in);
+    free_ingester (&in);
     if (rc != 0) {
-        free_storage_view (view);
+        free_storage_view (&view);
         return NULL;
     }
     // Ignore the return value of this function
@@ -96,12 +96,12 @@ storage_check_record_t* check_if_local_storage (storage_view_t* view, const char
 
 void free_storage_check_record (storage_check_record_t** record)
 {
-    if (record == NULL || *record = NULL)
+    if (record == NULL || *record == NULL)
         return;
-    if (record->packed_record != NULL)
-        json_decref (record->packed_record);
-    if (record->tmp_entry)
-        free_storage_entry (&(record->storage_entry_ptr));
+    if ((*record)->packed_record != NULL)
+        json_decref ((*record)->packed_record);
+    if ((*record)->tmp_entry)
+        free_storage_entry (&((*record)->storage_entry_ptr));
     free (*record);
     *record = NULL;
     return;

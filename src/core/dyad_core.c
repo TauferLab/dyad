@@ -8,6 +8,7 @@
 #include "dtl/dyad_dtl.h"
 #include "murmur3.h"
 #include "utils.h"
+#include "storage_check.h"
 
 #ifdef __cplusplus
 #include <climits>
@@ -20,6 +21,7 @@
 const struct dyad_ctx dyad_ctx_default = {
     NULL,   // h
     NULL,   // dtl_handle
+    NULL,   // view
     false,  // debug
     false,  // check
     false,  // reenter

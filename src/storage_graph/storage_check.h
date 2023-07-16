@@ -1,4 +1,4 @@
-#ifdef STORAGE_CHECK_H
+#ifndef STORAGE_CHECK_H
 #define STORAGE_CHECK_H
 
 #include "ingester_methods.h"

@@ -177,8 +177,8 @@ static void dyad_fetch_request_cb (flux_t *h,
         } else {
             should_transfer = true;
         }
-        free_storage_entry (consumer_storage_entry);
-        free_storage_check_record (producer_storage_record);
+        free_storage_entry (&consumer_storage_entry);
+        free_storage_check_record (&producer_storage_record);
     } else {
         should_transfer = true;
     }
