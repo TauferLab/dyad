@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include "dtl/dyad_mod_dtl.h"
+#include "storage_check.h"
 #include "read_all.h"
 #include "utils.h"
 
@@ -45,11 +46,13 @@ struct dyad_mod_ctx {
     flux_msg_handler_t **handlers;
     const char *dyad_path;
     dyad_mod_dtl_t *dtl_handle;
+    storage_view_t *view;
 };
 
 const struct dyad_mod_ctx dyad_mod_ctx_default = {
     NULL,
     false,
+    NULL,
     NULL,
     NULL,
     NULL
@@ -75,6 +78,10 @@ static void freectx (void *arg)
         dyad_mod_dtl_finalize (&(ctx->dtl_handle));
         ctx->dtl_handle = NULL;
     }
+    if (ctx->view != NULL) {
+        finalize_storage_view (&(ctx->view));
+        ctx->view = NULL;
+    }
     free (ctx);
 }
 
@@ -89,6 +96,7 @@ static dyad_mod_ctx_t *getctx (flux_t *h)
         ctx->handlers = NULL;
         ctx->dyad_path = NULL;
         ctx->dtl_handle = NULL;
+        ctx->view = NULL;
         if (flux_aux_set (h, "dyad", ctx, freectx) < 0) {
             FLUX_LOG_ERR (h, "DYAD_MOD: flux_aux_set() failed!\n");
             goto getctx_error;
@@ -121,6 +129,11 @@ static void dyad_fetch_request_cb (flux_t *h,
     uint32_t userid = 0u;
     char *upath = NULL;
     char fullpath[PATH_MAX + 1] = {'\0'};
+    json_t *consumer_storage_record = NULL;
+    storage_entry_t *consumer_storage_entry = NULL;
+    storage_check_record_t *producer_storage_record = NULL;
+    bool should_transfer = false;
+    bool is_local_cons = false;
     int saved_errno = errno;
     int rc = 0;
 
@@ -134,22 +147,61 @@ static void dyad_fetch_request_cb (flux_t *h,
 
     FLUX_LOG_INFO (h, "DYAD_MOD: unpacking RPC message");
 
-    if (dyad_mod_dtl_rpc_unpack (ctx->dtl_handle, msg, &upath) < 0) {
+    if (dyad_mod_dtl_rpc_unpack (ctx->dtl_handle, msg, &upath,
+            &consumer_storage_record, &is_local_cons) < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not unpack message from client\n");
         errno = EPROTO;
         goto fetch_error;
     }
 
     FLUX_LOG_INFO (h, "DYAD_MOD: requested user_path: %s", upath);
-    FLUX_LOG_INFO (h, "DYAD_MOD: sending initial response to consumer");
 
+    strncpy (fullpath, ctx->dyad_path, PATH_MAX - 1);
+    concat_str (fullpath, upath, "/", PATH_MAX);
+    
+    if (!is_local_cons) {
+        consumer_storage_entry = unpack_storage_entry (consumer_storage_record);
+        if (consumer_storage_entry == NULL) {
+            FLUX_LOG_ERR (h, "DYAD_MOD: failed to unpack storage entry from consumer\n");
+            errno = EINVAL;
+            goto fetch_error;
+        }
+        producer_storage_record = check_if_local_storage (ctx->view, fullpath);
+        if (producer_storage_record == NULL) {
+            FLUX_LOG_ERR (h, "DYAD_MOD: failed to check for producer storage device\n");
+            errno = EINVAL;
+            goto fetch_error;
+        }
+        if (check_storage_entry_eq (consumer_storage_entry, producer_storage_record->storage_entry_ptr)) {
+            should_transfer = false;
+        } else {
+            should_transfer = true;
+        }
+        free_storage_entry (consumer_storage_entry);
+        free_storage_check_record (producer_storage_record);
+    } else {
+        should_transfer = true;
+    }
+    
+    rc = flux_respond_pack (
+        h,
+        msg,
+        "b",
+        should_transfer
+    );
+    if (rc != 0) {
+        FLUX_LOG_ERR (h, "Could not send response for shared storage to consumer\n");
+        goto fetch_error;
+    }
+    if (!should_transfer) {
+        goto fetch_success;
+    }
+
+    FLUX_LOG_INFO (h, "DYAD_MOD: sending initial response to consumer");
     if (dyad_mod_dtl_rpc_respond (ctx->dtl_handle, msg) < 0) {
         FLUX_LOG_ERR (ctx->h, "Could not send primary RPC response to client\n");
         goto fetch_error;
     }
-
-    strncpy (fullpath, ctx->dyad_path, PATH_MAX - 1);
-    concat_str (fullpath, upath, "/", PATH_MAX);
 
 #if DYAD_SPIN_WAIT
     if (!get_stat (fullpath, 1000U, 1000L)) {
@@ -189,6 +241,7 @@ static void dyad_fetch_request_cb (flux_t *h,
         goto fetch_error;
     }
 
+fetch_success:
     FLUX_LOG_INFO (h, "Close RPC message stream with an ENODATA message");
     if (flux_respond_error (h, msg, ENODATA, NULL) < 0) {
         FLUX_LOG_ERR (h, "DYAD_MOD: %s: flux_respond_error with ENODATA failed\n", __FUNCTION__);
@@ -213,6 +266,13 @@ static int dyad_open (flux_t *h, dyad_mod_dtl_mode_t dtl_mode, bool debug)
     char *e = NULL;
 
     ctx->debug = debug;
+    // TODO add config setting to define storage graph ingestion
+    //      method once more methods are added
+    ctx->view = init_storage_view (LINUX_PROC_MOUNTS);
+    if (ctx->view == NULL) {
+        FLUX_LOG_ERR (h, "Could not create local view of storage graph");
+        return -1;
+    }
     rc = dyad_mod_dtl_init (
         dtl_mode,
         h,

@@ -44,14 +44,17 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode,
 }
 
 int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
-        const flux_msg_t *packed_obj, char **upath)
+        const flux_msg_t *packed_obj, char **upath,
+        json_t **consumer_storage_record, bool *is_local_cons)
 {
     if (dtl_handle->mode == DYAD_DTL_UCX)
     {
         return dyad_mod_ucx_dtl_rpc_unpack(
             (dyad_mod_ucx_dtl_t*)dtl_handle->real_handle,
             packed_obj,
-            upath
+            upath,
+            consumer_storage_record,
+            is_local_cons
         );
     }
     if (dtl_handle->mode == DYAD_DTL_FLUX_RPC)
@@ -59,7 +62,9 @@ int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
         return dyad_mod_flux_dtl_rpc_unpack(
             (dyad_mod_flux_dtl_t*)dtl_handle->real_handle,
             packed_obj,
-            upath
+            upath,
+            consumer_storage_record,
+            is_local_cons
         );
     }
     FLUX_LOG_ERR (dtl_handle->h, "Invalid DYAD DTL mode: %d\n", (int) dtl_handle->mode);

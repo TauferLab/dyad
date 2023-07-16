@@ -18,6 +18,7 @@ dyad_la_LDFLAGS = \
     -Wl,-rpath,'$(UCX_LIBDIR)'
 dyad_la_LIBADD = \
 	$(top_builddir)/src/utils/libutils.la \
+	$(top_builddir)/src/storage_graph/libstorage_graph.la \
     $(UCX_LIBS) \
 	$(JANSSON_LIBS) \
 	$(FLUX_CORE_LIBS)
@@ -25,6 +26,7 @@ dyad_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-I$(top_srcdir)/src/utils \
 	-I$(top_srcdir)/src/utils/base64 \
+	-I$(top_srcdir)/src/storage_graph \
 	$(UCX_CFLAGS) \
 	$(JANSSON_CFLAGS) \
 	$(FLUX_CORE_CFLAGS)

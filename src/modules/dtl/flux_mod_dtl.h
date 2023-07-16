@@ -3,6 +3,8 @@
 
 #include "dyad_flux_log.h"
 
+#include <jansson.h>
+
 #ifdef __cplusplus
 #include <cstdlib>
 #else
@@ -22,7 +24,8 @@ int dyad_mod_flux_dtl_init(flux_t *h, bool debug,
         dyad_mod_flux_dtl_t **dtl_handle);
 
 int dyad_mod_flux_dtl_rpc_unpack(dyad_mod_flux_dtl_t *dtl_handle,
-        const flux_msg_t *packed_obj, char **upath);
+        const flux_msg_t *packed_obj, char **upath,
+        json_t **consumer_storage_record, bool *is_local_cons);
 
 int dyad_mod_flux_dtl_rpc_respond (dyad_mod_flux_dtl_t *dtl_handle,
         const flux_msg_t *orig_msg);

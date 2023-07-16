@@ -38,8 +38,8 @@ dyad_rc_t dyad_dtl_init(dyad_dtl_mode_t mode, flux_t *h,
     return DYAD_RC_BADDTLMODE;
 }
 
-dyad_rc_t dyad_dtl_rpc_pack(dyad_dtl_t *dtl_handle, const char *upath, uint32_t producer_rank,
-        json_t **packed_obj)
+dyad_rc_t dyad_dtl_rpc_pack(dyad_dtl_t *dtl_handle, const char *upath,
+        uint32_t producer_rank, json_t **packed_obj)
 {
     if (dtl_handle->mode == DYAD_DTL_UCX) {
         return dyad_dtl_ucx_rpc_pack(

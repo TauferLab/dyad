@@ -2,6 +2,8 @@
 #define __DYAD_MOD_UCX_DTL_H__
 
 #include "dyad_flux_log.h"
+
+#include <jansson.h>
 #include <ucp/api/ucp.h>
 
 #if defined(__cplusplus)
@@ -27,7 +29,8 @@ typedef struct dyad_mod_ucx_dtl dyad_mod_ucx_dtl_t;
 int dyad_mod_ucx_dtl_init(flux_t *h, bool debug, dyad_mod_ucx_dtl_t **dtl_handle);
 
 int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
-        const flux_msg_t *packed_obj, char **upath);
+        const flux_msg_t *packed_obj, char **upath,
+        json_t **consumer_storage_record, bool *is_local_cons);
 
 int dyad_mod_ucx_dtl_rpc_respond (dyad_mod_ucx_dtl_t *dtl_handle,
         const flux_msg_t *orig_msg);

@@ -110,7 +110,8 @@ ucx_init_error:;
 }
 
 int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
-        const flux_msg_t *packed_obj, char **upath)
+        const flux_msg_t *packed_obj, char **upath,
+        json_t **consumer_storage_record, bool *is_local_cons)
 {
     char* enc_addr = NULL;
     size_t enc_addr_len = 0;
@@ -121,7 +122,7 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
     FLUX_LOG_INFO (dtl_handle->h, "Unpacking RPC payload\n");
     errcode = flux_request_unpack(packed_obj,
         NULL,
-        "{s:s, s:i, s:i, s:s%}",
+        "[{s:s, s:i, s:i, s:s%}, o, b]",
         "upath",
         upath,
         "tag_prod",
@@ -130,7 +131,9 @@ int dyad_mod_ucx_dtl_rpc_unpack(dyad_mod_ucx_dtl_t *dtl_handle,
         &tag_cons,
         "ucx_addr",
         &enc_addr,
-        &enc_addr_len
+        &enc_addr_len,
+        consumer_storage_record,
+        is_local_cons
     );
     if (errcode < 0)
     {

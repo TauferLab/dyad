@@ -1,7 +1,9 @@
 #ifndef __DYAD_MOD_DTL_H__
 #define __DYAD_MOD_DTL_H__
 
-#include <dyad_flux_log.h>
+#include "dyad_flux_log.h"
+
+#include <jansson.h>
 
 #if defined(__cplusplus)
 #include <cstdlib>
@@ -26,7 +28,8 @@ int dyad_mod_dtl_init(dyad_mod_dtl_mode_t mode, flux_t *h,
         bool debug, dyad_mod_dtl_t **dtl_handle);
 
 int dyad_mod_dtl_rpc_unpack(dyad_mod_dtl_t *dtl_handle,
-        const flux_msg_t *packed_obj, char **upath);
+        const flux_msg_t *packed_obj, char **upath,
+        json_t **consumer_storage_record, bool *is_local_cons);
 
 int dyad_mod_dtl_rpc_respond(dyad_mod_dtl_t *dtl_handle,
         const flux_msg_t *orig_msg);
