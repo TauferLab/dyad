@@ -8,20 +8,21 @@ dyad_la_SOURCES = \
 	dtl/ucx_mod_dtl.h \
 	dyad.c \
 	dyad_flux_log.h
+dyad_la_LIBADD = \
+	$(top_builddir)/src/utils/libutils.la \
+	$(top_builddir)/src/utils/libbase64.la \
+	$(JANSSON_LIBS) \
+	$(top_builddir)/src/storage_graph/libstorage_graph.la \
+    $(UCX_LIBS) \
+	$(FLUX_CORE_LIBS)
 dyad_la_LDFLAGS = \
+    -Wl,-rpath,'$(UCX_LIBDIR)' \
+	-export-symbols-regex '^mod_(name|main)$$' \
 	$(AM_LDFLAGS) \
 	-module \
 	-avoid-version \
 	-no-undefined \
 	-shared \
-	-export-symbols-regex '^mod_(name|main)$$' \
-    -Wl,-rpath,'$(UCX_LIBDIR)'
-dyad_la_LIBADD = \
-	# libutils.la is provided through libstorage_graph.ls
-	$(top_builddir)/src/storage_graph/libstorage_graph.la \
-    $(UCX_LIBS) \
-	$(JANSSON_LIBS) \
-	$(FLUX_CORE_LIBS)
 dyad_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-I$(top_srcdir)/src/utils \

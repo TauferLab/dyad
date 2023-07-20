@@ -9,9 +9,6 @@ libstorage_graph_la_SOURCES = \
     ingester_methods.h \
 	storage_check.c \
 	storage_check.h
-libstorage_graph_la_LIBADD = \
-    $(top_builddir)/src/utils/libutils.la \
-    $(JANSSON_LIBS)
 libstorage_graph_la_CPPFLAGS = \
     $(AM_CPPFLAGS) \
 	-I$(top_srcdir)/src/utils \

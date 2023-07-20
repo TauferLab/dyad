@@ -1,15 +1,20 @@
 lib_LTLIBRARIES = dyad_wrapper.la
 dyad_wrapper_la_SOURCES = wrapper.c
+dyad_wrapper_la_LIBADD = \
+	$(top_builddir)/src/core/libdyad_core_deps.la \
+	$(top_builddir)/src/core/libdyad_core_internal.la
 dyad_wrapper_la_LDFLAGS = \
 	-Wl,-rpath,'$(UCX_LIBDIR)' \
+	-export-symbols wrapper.sym \
 	$(AM_LDFLAGS) \
 	-module \
 	-avoid-version \
 	-no-undefined \
-	-shared \
-	-export-symbols wrapper.sym
-dyad_wrapper_la_LIBADD = $(top_builddir)/src/core/libdyad_core.la
-dyad_wrapper_la_CPPFLAGS = -I$(top_srcdir)/src/utils -I$(top_srcdir)/src/core $(FLUX_CORE_CFLAGS)
+	-shared
+dyad_wrapper_la_CPPFLAGS = \
+	-I$(top_srcdir)/src/utils \
+	-I$(top_srcdir)/src/core \
+	$(FLUX_CORE_CFLAGS)
 
 install-exec-hook:
 	@(cd $(DESTDIR)$(libdir) && $(RM) dyad_wrapper.la)
