@@ -1,0 +1,64 @@
+#!/bin/sh
+# -*- python -*-
+
+# This file is derived from the `spack` shell script at
+# https://github.com/spack/spack/blob/develop/bin/spack
+#
+# It is a bilingual file.
+# 
+# The first part (denoted by """:" and ":""")
+# is executed when running this file under a shell. This Bourne shell
+# code finds the version of Python to use for running subcommands, and
+# then it runs this file under than Python interpreter.
+#
+# The rest of this file is a Python script that handles the actual details
+# of command line parsing and calling the correct subcommand.
+
+""":"
+DYAD_PREFERRED_PYTHONS="python3 python /usr/bin/python3 /usr/bin/python /usr/libexec/platform-python"
+for interp in "${DYAD_PYTHON:-}" ${DYAD_PREFERRED_PYTHONS}; do
+    if command -v > /dev/null "$interp"; then
+        export DYAD_PYTHON="$(command -v "$interp")"
+        exec "${DYAD_PYTHON}" "$0" "$@"
+    fi
+done
+
+echo "ERROR: 'dyad' cannot find a Python interpreter!" >&2
+exit 1
+":"""
+
+import argparse
+import os
+import re
+import sys
+
+min_python_version = (3, 6)
+
+if sys.version_info[:2] < min_python_version:
+    err_msg = f"ERROR: Trying to run 'dyad' with Python {'.'.join(sys.version_info)}!\n"
+    err_msg += "       'dyad' requires Python {'.'.join(sys.version_info)} or higher!"
+    sys.exit(err_msg)
+    
+dyad_exe_path = os.path.realpath(os.path.expanduser(__file__))
+dyad_bin_path = os.path.dirname(dyad_exe_path)
+dyad_prefix = os.path.dirname(dyad_bin_path)
+
+libdir = "lib"
+if "DYAD_LIBDIR" in os.environ:
+    libdir = os.environ["DYAD_LIBDIR"]
+dyad_lib_path = os.path.join(dyad_prefix, libdir)
+
+sys.path.insert(0, dyad_bin_path)
+
+subcommands = {}
+for f in os.listdir(dyad_bin_path):
+    if f.startswith("dyad") and f.endswith(".py"):
+        py_file = os.path.basename(f)
+        match_obj = re.fullmatch(r"dyad-(?P<subcmd>[a-zA-Z0-9_-]+)\.py", py_file)
+        if match_obj is not None:
+            subcommands[match_obj.group("subcmd")] = py_file[:-3]
+            
+parser = argparse.ArgumentParser("Utility for controlling and configuring DYAD")
+parser.add_argument("subcmd", choices=subcommands,
+                    help="Subcommand to run")
+args = parser.parse_args()
