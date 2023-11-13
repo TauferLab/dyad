@@ -43,16 +43,8 @@ static int gen_path_key (const char* str,
                          const uint32_t depth,
                          const uint32_t width)
 {
-    static const uint32_t seeds[10] = {104677u,
-                                       104681u,
-                                       104683u,
-                                       104693u,
-                                       104701u,
-                                       104707u,
-                                       104711u,
-                                       104717u,
-                                       104723u,
-                                       104729u};
+    static const uint32_t seeds[10] =
+        {104677u, 104681u, 104683u, 104693u, 104701u, 104707u, 104711u, 104717u, 104723u, 104729u};
 
     uint32_t seed = 57u;
     uint32_t hash[4] = {0u};  // Output for the hash
@@ -145,8 +137,7 @@ publish_done:;
     return rc;
 }
 
-DYAD_CORE_FUNC_MODS dyad_rc_t dyad_commit (dyad_ctx_t* restrict ctx,
-                                           const char* restrict fname)
+DYAD_CORE_FUNC_MODS dyad_rc_t dyad_commit (dyad_ctx_t* restrict ctx, const char* restrict fname)
 {
     dyad_rc_t rc = DYAD_RC_OK;
     char upath[PATH_MAX];
@@ -182,68 +173,6 @@ DYAD_CORE_FUNC_MODS dyad_rc_t dyad_kvs_read (const dyad_ctx_t* restrict ctx,
                                              bool should_wait,
                                              dyad_metadata_t** mdata)
 {
-    dyad_rc_t rc = DYAD_RC_OK;
-    int kvs_lookup_flags = 0;
-    flux_future_t* f = NULL;
-    if (mdata == NULL) {
-        DYAD_LOG_ERR (ctx,
-                      "Metadata double pointer is NULL. Cannot correctly create metadata "
-                      "object");
-        rc = DYAD_RC_NOTFOUND;
-        goto kvs_read_end;
-    }
-    // Lookup information about the desired file (represented by kvs_topic)
-    // from the Flux KVS. If there is no information, wait for it to be
-    // made available
-    if (should_wait)
-        kvs_lookup_flags = FLUX_KVS_WAITCREATE;
-    DYAD_LOG_INFO (ctx, "Retrieving information from KVS under the key %s\n", topic);
-    f = flux_kvs_lookup (ctx->h, ctx->kvs_namespace, kvs_lookup_flags, topic);
-    // If the KVS lookup failed, log an error and return DYAD_BADLOOKUP
-    if (f == NULL) {
-        DYAD_LOG_ERR (ctx, "KVS lookup failed!\n");
-        rc = DYAD_RC_NOTFOUND;
-        goto kvs_read_end;
-    }
-    // Extract the rank of the producer from the KVS response
-    DYAD_LOG_INFO (ctx, "Building metadata object from KVS entry\n");
-    if (*mdata != NULL) {
-        DYAD_LOG_INFO (ctx, "Metadata object is already allocated. Skipping allocation");
-    } else {
-        *mdata = (dyad_metadata_t*)malloc (sizeof (struct dyad_metadata));
-        if (*mdata == NULL) {
-            DYAD_LOG_ERR (ctx, "Cannot allocate memory for metadata object");
-            rc = DYAD_RC_SYSFAIL;
-            goto kvs_read_end;
-        }
-    }
-    size_t topic_len = strlen (topic);
-    (*mdata)->fpath = (char*)malloc (topic_len + 1);
-    if ((*mdata)->fpath == NULL) {
-        DYAD_LOG_ERR (ctx, "Cannot allocate memory for fpath in metadata object");
-        rc = DYAD_RC_SYSFAIL;
-        goto kvs_read_end;
-    }
-    memset ((*mdata)->fpath, '\0', topic_len + 1);
-    strncpy ((*mdata)->fpath, topic, topic_len);
-    rc = flux_kvs_lookup_get_unpack (f, "i", &((*mdata)->owner_rank));
-    // If the extraction did not work, log an error and return DYAD_BADFETCH
-    if (rc < 0) {
-        DYAD_LOG_ERR (ctx, "Could not unpack owner's rank from KVS response\n");
-        rc = DYAD_RC_BADMETADATA;
-        goto kvs_read_end;
-    }
-    rc = DYAD_RC_OK;
-
-kvs_read_end:
-    if (DYAD_IS_ERROR (rc) && mdata != NULL && *mdata != NULL) {
-        dyad_free_metadata (mdata);
-    }
-    if (f != NULL) {
-        flux_future_destroy (f);
-        f = NULL;
-    }
-    return rc;
 }
 
 DYAD_CORE_FUNC_MODS dyad_rc_t dyad_fetch (const dyad_ctx_t* restrict ctx,
@@ -312,10 +241,7 @@ DYAD_CORE_FUNC_MODS dyad_rc_t dyad_get_data (const dyad_ctx_t* ctx,
     flux_future_t* f;
     json_t* rpc_payload;
     DYAD_LOG_INFO (ctx, "Packing payload for RPC to DYAD module");
-    rc = ctx->dtl_handle->rpc_pack (ctx->dtl_handle,
-                                    mdata->fpath,
-                                    mdata->owner_rank,
-                                    &rpc_payload);
+    rc = ctx->dtl_handle->rpc_pack (ctx->dtl_handle, mdata->fpath, mdata->owner_rank, &rpc_payload);
     if (DYAD_IS_ERROR (rc)) {
         DYAD_LOG_ERR (ctx,
                       "Cannot create JSON payload for Flux RPC to DYAD "
@@ -371,9 +297,7 @@ get_done:;
     // well in the module, this last message will set errno to ENODATA (i.e.,
     // end of stream). Otherwise, something went wrong, so we'll return
     // DYAD_RC_BADRPC.
-    DYAD_LOG_INFO (ctx,
-                   "Wait for end-of-stream message from module (current RC = %d)\n",
-                   rc);
+    DYAD_LOG_INFO (ctx, "Wait for end-of-stream message from module (current RC = %d)\n", rc);
     if (rc != DYAD_RC_RPC_FINISHED && rc != DYAD_RC_BADRPC) {
         if (!(flux_rpc_get (f, NULL) < 0 && errno == ENODATA)) {
             DYAD_LOG_ERR (ctx,

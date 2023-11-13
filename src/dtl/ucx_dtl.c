@@ -40,9 +40,7 @@ static void dyad_recv_callback (void* request,
                                 const ucp_tag_recv_info_t* tag_info,
                                 void* user_data)
 #else
-static void dyad_recv_callback (void* request,
-                                ucs_status_t status,
-                                ucp_tag_recv_info_t* tag_info)
+static void dyad_recv_callback (void* request, ucs_status_t status, ucp_tag_recv_info_t* tag_info)
 #endif
 {
     dyad_ucx_request_t* real_request = NULL;
@@ -67,8 +65,7 @@ void dyad_ucx_ep_err_handler (void* arg, ucp_ep_h ep, ucs_status_t status)
 }
 
 // Simple function used to wait on the async receive
-static ucs_status_t dyad_ucx_request_wait (dyad_dtl_ucx_t* dtl_handle,
-                                           dyad_ucx_request_t* request)
+static ucs_status_t dyad_ucx_request_wait (dyad_dtl_ucx_t* dtl_handle, dyad_ucx_request_t* request)
 {
     ucs_status_t final_request_status = UCS_OK;
     // If 'request' is actually a request handle, this means the communication
@@ -106,10 +103,7 @@ static inline dyad_rc_t dyad_dtl_ucx_finalize_impl (dyad_dtl_ucx_t** dtl_handle)
 {
 }
 
-dyad_rc_t dyad_dtl_ucx_init (dyad_dtl_t* self,
-                             dyad_dtl_mode_t mode,
-                             flux_t* h,
-                             bool debug)
+dyad_rc_t dyad_dtl_ucx_init (dyad_dtl_t* self, dyad_dtl_mode_t mode, flux_t* h, bool debug)
 {
     ucp_params_t ucx_params;
     ucp_worker_params_t worker_params;
@@ -153,8 +147,8 @@ dyad_rc_t dyad_dtl_ucx_init (dyad_dtl_t* self,
     //   * Remote Memory Access communication
     //   * Auto initialization of request objects
     //   * Worker sleep, wakeup, poll, etc. features
-    ucx_params.field_mask = UCP_PARAM_FIELD_FEATURES | UCP_PARAM_FIELD_REQUEST_SIZE
-                            | UCP_PARAM_FIELD_REQUEST_INIT;
+    ucx_params.field_mask =
+        UCP_PARAM_FIELD_FEATURES | UCP_PARAM_FIELD_REQUEST_SIZE | UCP_PARAM_FIELD_REQUEST_INIT;
     ucx_params.features = UCP_FEATURE_TAG |
                           // UCP_FEATURE_RMA |
                           UCP_FEATURE_WAKEUP;
@@ -182,17 +176,14 @@ dyad_rc_t dyad_dtl_ucx_init (dyad_dtl_t* self,
     // The settings enabled are:
     //   * Single-threaded mode (TODO look into multi-threading support)
     //   * Restricting wakeup events to only include Tag-matching recv events
-    worker_params.field_mask =
-        UCP_WORKER_PARAM_FIELD_THREAD_MODE | UCP_WORKER_PARAM_FIELD_EVENTS;
+    worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE | UCP_WORKER_PARAM_FIELD_EVENTS;
     // TODO look into multi-threading support
-    worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
+    worker_params.thread_mode = UCS_THREAD_MODE_MULTI;
     worker_params.events = UCP_WAKEUP_TAG_RECV;
 
     // Create the worker and log an error if that fails
     FLUX_LOG_INFO (dtl_handle->h, "Creating UCP worker\n");
-    status = ucp_worker_create (dtl_handle->ucx_ctx,
-                                &worker_params,
-                                &(dtl_handle->ucx_worker));
+    status = ucp_worker_create (dtl_handle->ucx_ctx, &worker_params, &(dtl_handle->ucx_worker));
     if (UCX_STATUS_FAIL (status)) {
         FLUX_LOG_ERR (dtl_handle->h, "ucp_worker_create failed (status = %d)!\n", status);
         goto error;
@@ -326,9 +317,7 @@ dyad_rc_t dyad_dtl_ucx_rpc_unpack (dyad_dtl_t* self, const flux_msg_t* msg, char
     }
     dtl_handle->comm_tag = ((uint64_t)tag_prod << 32) | (uint64_t)tag_cons;
     FLUX_LOG_INFO (dtl_handle->h, "Obtained upath from RPC payload: %s\n", upath);
-    FLUX_LOG_INFO (dtl_handle->h,
-                   "Obtained UCP tag from RPC payload: %lu\n",
-                   dtl_handle->comm_tag);
+    FLUX_LOG_INFO (dtl_handle->h, "Obtained UCP tag from RPC payload: %lu\n", dtl_handle->comm_tag);
     FLUX_LOG_INFO (dtl_handle->h, "Decoding consumer UCP address using base64\n");
     dtl_handle->addr_len = base64_decoded_length (enc_addr_len);
     dtl_handle->consumer_address = (ucp_address_t*)malloc (dtl_handle->addr_len);
@@ -361,28 +350,23 @@ dyad_rc_t dyad_dtl_ucx_rpc_recv_response (dyad_dtl_t* self, flux_future_t* f)
     return DYAD_RC_OK;
 }
 
-dyad_rc_t dyad_dtl_ucx_establish_connection (dyad_dtl_t* self,
-                                             dyad_dtl_comm_mode_t comm_mode)
+dyad_rc_t dyad_dtl_ucx_establish_connection (dyad_dtl_t* self, dyad_dtl_comm_mode_t comm_mode)
 {
     ucp_ep_params_t params;
     ucs_status_t status = UCS_OK;
     dyad_dtl_ucx_t* dtl_handle = self->private.ucx_dtl_handle;
     dtl_handle->curr_comm_mode = comm_mode;
     if (comm_mode == DYAD_COMM_SEND) {
-        params.field_mask = UCP_EP_PARAM_FIELD_REMOTE_ADDRESS
-                            | UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE
+        params.field_mask = UCP_EP_PARAM_FIELD_REMOTE_ADDRESS | UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE
                             | UCP_EP_PARAM_FIELD_ERR_HANDLER;
         params.address = dtl_handle->consumer_address;
         params.err_mode = UCP_ERR_HANDLING_MODE_PEER;
         params.err_handler.cb = dyad_ucx_ep_err_handler;
         params.err_handler.arg = (void*)dtl_handle->h;
-        FLUX_LOG_INFO (dtl_handle->h,
-                       "Create UCP endpoint for communication with consumer\n");
+        FLUX_LOG_INFO (dtl_handle->h, "Create UCP endpoint for communication with consumer\n");
         status = ucp_ep_create (dtl_handle->ucx_worker, &params, &dtl_handle->ep);
         if (status != UCS_OK) {
-            FLUX_LOG_ERR (dtl_handle->h,
-                          "ucp_ep_create failed with status %d\n",
-                          (int)status);
+            FLUX_LOG_ERR (dtl_handle->h, "ucp_ep_create failed with status %d\n", (int)status);
             return DYAD_RC_UCXCOMM_FAIL;
         }
         if (dtl_handle->debug) {
@@ -423,8 +407,7 @@ dyad_rc_t dyad_dtl_ucx_send (dyad_dtl_t* self, void* buf, size_t buflen)
     params.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK;
     params.cb.send = dyad_send_callback;
     FLUX_LOG_INFO (dtl_handle->h, "Sending data to consumer with ucp_tag_send_nbx\n");
-    stat_ptr =
-        ucp_tag_send_nbx (dtl_handle->ep, buf, buflen, dtl_handle->comm_tag, &params);
+    stat_ptr = ucp_tag_send_nbx (dtl_handle->ep, buf, buflen, dtl_handle->comm_tag, &params);
 #else
     FLUX_LOG_INFO (dtl_handle->h,
                    "Sending %lu bytes of data to consumer with "

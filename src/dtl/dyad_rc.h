@@ -42,6 +42,7 @@ enum dyad_core_return_codes {
     DYAD_RC_BAD_B64DECODE = -18,   // Decoding of data w/ base64 failed
     DYAD_RC_BAD_COMM_MODE = -19,   // Invalid comm mode provided to DTL
     DYAD_RC_UNTRACKED = -20,       // Provided path is not tracked by DYAD
+    DYAD_RC_BADKVSMODE = -21,      // Invalid KVS mode provided
 };
 
 typedef enum dyad_core_return_codes dyad_rc_t;
