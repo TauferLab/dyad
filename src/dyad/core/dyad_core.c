@@ -365,7 +365,7 @@ DYAD_CORE_FUNC_MODS dyad_rc_t dyad_get_data (const dyad_ctx_t* ctx,
         goto get_done;
     }
     DYAD_LOG_INFO (ctx, "Establish DTL connection with DYAD module");
-    rc = ctx->dtl_handle->establish_connection (ctx->dtl_handle, DYAD_COMM_RECV);
+    rc = ctx->dtl_handle->establish_connection (ctx->dtl_handle);
     if (DYAD_IS_ERROR (rc)) {
         DYAD_LOG_ERR (ctx,
                       "Cannot establish connection with DYAD module on broker "
@@ -478,7 +478,7 @@ DYAD_CORE_FUNC_MODS dyad_rc_t dyad_pull (const dyad_ctx_t* restrict ctx,
 pull_done:
     DYAD_PERF_REGION_END (ctx->perf_handle, "dyad_write_data_for_consumer");
     if (file_data != NULL) {
-        free ((void*)file_data);
+        ctx->dtl_handle->return_buffer (ctx->dtl_handle, (void**)&file_data);
     }
     // If "check" is set and the operation was successful, set the
     // DYAD_CHECK_ENV environment variable to "ok"
@@ -596,6 +596,7 @@ dyad_rc_t dyad_init (bool debug,
     FLUX_LOG_INFO ((*ctx)->h, "DYAD_CORE: inintializing DYAD DTL");
     rc = dyad_dtl_init (&(*ctx)->dtl_handle,
                         dtl_mode,
+                        DYAD_COMM_RECV,
                         (*ctx)->h,
                         (*ctx)->debug,
                         (*ctx)->perf_handle);
