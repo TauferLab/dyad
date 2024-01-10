@@ -3,8 +3,8 @@
 
 #include <dyad/common/dyad_flux_log.h>
 #include <dyad/common/dyad_rc.h>
-#include <dyad/perf/dyad_perf.h>
 #include <dyad/dtl/dyad_dtl.h>
+#include <dyad/perf/dyad_perf.h>
 #include <flux/core.h>
 #include <jansson.h>
 #ifdef __cplusplus
@@ -37,6 +37,25 @@ enum dyad_dtl_comm_mode {
 };
 typedef enum dyad_dtl_comm_mode dyad_dtl_comm_mode_t;
 
+struct dyad_dtl_ucx_transfer_ctx;
+struct dyad_dtl_flux_transfer_ctx;
+
+union dyad_dtl_private_transfer_ctx {
+    struct dyad_dtl_ucx_transfer_ctx* ucx_ctx;
+    struct dyad_dtl_flux_transfer_ctx* flux_ctx;
+};
+typedef struct dyad_dtl_private_transfer_ctx dyad_dtl_private_transfer_ctx_t;
+
+struct dyad_dtl_transfer_ctx {
+    dyad_dtl_private_transfer_ctx_t private;
+    dyad_dtl_mode_t mode;
+    dyad_perf_t* perf;
+    char* upath;
+    void* data_buf;
+    size_t data_size;
+};
+typedef struct dyad_dtl_transfer_ctx dyad_dtl_transfer_ctx_t;
+
 struct dyad_dtl {
     dyad_dtl_private_t private;
     dyad_dtl_mode_t mode;
@@ -45,15 +64,21 @@ struct dyad_dtl {
                            const char* restrict upath,
                            uint32_t producer_rank,
                            json_t** restrict packed_obj);
-    dyad_rc_t (*rpc_unpack) (struct dyad_dtl* self, const flux_msg_t* packed_obj, char** upath);
-    dyad_rc_t (*rpc_respond) (struct dyad_dtl* self, const flux_msg_t* orig_msg);
-    dyad_rc_t (*rpc_recv_response) (struct dyad_dtl* self, flux_future_t* f);
+    dyad_rc_t (*rpc_unpack) (struct dyad_dtl* self,
+                             const flux_msg_t* packed_obj,
+                             dyad_dtl_transfer_ctx_t** trans_ctx);
+    dyad_rc_t (*rpc_respond) (struct dyad_dtl* self,
+                              const flux_msg_t* orig_msg,
+                              dyad_dtl_transfer_ctx_t* trans_ctx);
+    dyad_rc_t (*rpc_recv_response) (struct dyad_dtl* self,
+                                    flux_future_t* f,
+                                    dyad_dtl_transfer_ctx_t* trans_ctx);
     dyad_rc_t (*get_buffer) (struct dyad_dtl* self, size_t data_size, void** data_buf);
     dyad_rc_t (*return_buffer) (struct dyad_dtl* self, void** data_buf);
-    dyad_rc_t (*establish_connection) (struct dyad_dtl* self);
-    dyad_rc_t (*send) (struct dyad_dtl* self, void* buf, size_t buflen);
-    dyad_rc_t (*recv) (struct dyad_dtl* self, void** buf, size_t* buflen);
-    dyad_rc_t (*close_connection) (struct dyad_dtl* self);
+    dyad_rc_t (*establish_connection) (struct dyad_dtl* self, dyad_dtl_transfer_ctx_t* trans_ctx);
+    dyad_rc_t (*send) (struct dyad_dtl* self, dyad_dtl_transfer_ctx_t* trans_ctx);
+    dyad_rc_t (*recv) (struct dyad_dtl* self, dyad_dtl_transfer_ctx_t* trans_ctx);
+    dyad_rc_t (*close_connection) (struct dyad_dtl* self, dyad_dtl_transfer_ctx_t* trans_ctx);
 };
 typedef struct dyad_dtl dyad_dtl_t;
 
