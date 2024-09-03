@@ -9,6 +9,7 @@
 
 #include <dyad/common/dyad_rc.h>
 #include <dyad/common/dyad_structures.h>
+#include <dyad/core/dyad_ctx.h>
 #include <sys/types.h>
 #include <unistd.h>
 
