@@ -30,7 +30,6 @@ extern "C" {
 #else
 #define DYAD_CORE_FUNC_MODS static inline
 #endif
-DYAD_DLL_EXPORTED extern const struct dyad_ctx dyad_ctx_default;
 
 struct dyad_metadata {
   char *fpath;
