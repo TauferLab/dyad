@@ -14,10 +14,12 @@
 #include <unistd.h>
 
 #ifdef __cplusplus
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #else
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #endif
